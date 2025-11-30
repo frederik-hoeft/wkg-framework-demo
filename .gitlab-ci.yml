@@ -10,9 +10,9 @@ cache:
   key: "$CI_JOB_STAGE-$CI_COMMIT_REF_SLUG"
   paths:
     # Main JSON file holding information about package dependency tree, packages versions,
-    - '$SOURCE_CODE_PATH$OBJECTS_DIRECTORY/*/project.assets.json'
+    - '$SOURCE_CODE_PATH/$OBJECTS_DIRECTORY/*/project.assets.json'
     # Other NuGet and MSBuild related files. Also needed.
-    - '$SOURCE_CODE_PATH$OBJECTS_DIRECTORY/*/*.csproj.nuget.*'
+    - '$SOURCE_CODE_PATH/$OBJECTS_DIRECTORY/*/*.csproj.nuget.*'
     # Path to the directory where restored dependencies are kept.
     - '$NUGET_PACKAGES_DIRECTORY'
   policy: pull-push
