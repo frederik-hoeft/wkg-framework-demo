@@ -57,6 +57,7 @@ builder.Services.AddAuthentication(options =>
 });
 
 builder.Services.AddAuthorization();
+builder.Services.AddHttpContextAccessor();
 
 builder.Services.AddTransactionManagement<ApplicationDbContext>(transactionOptions => transactionOptions
     .UseIsolationLevel(IsolationLevel.ReadCommitted));
@@ -70,6 +71,7 @@ builder.Services.AddTransactionManagement<ApplicationDbContext>(transactionOptio
 builder.Services.AddSingleton<IJwtAlgorithmProvider, JwtHmacSha256AlgorithmProvider>();
 builder.Services.AddSingleton<IJwtSigningKeyProvider, JwtSymmetricSigningKeyProvider>();
 builder.Services.AddScoped<IJwtService, JwtService>();
+builder.Services.AddScoped<IUserClaimIndex, UserClaimIndex>();
 builder.Services.AddSingleton<ITimingRandomizationService, CsprngTimingRandomizationService>();
 
 builder.Services.AddControllers();

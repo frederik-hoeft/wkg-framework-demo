@@ -1,7 +1,9 @@
-﻿using Microsoft.AspNetCore.Identity;
+﻿using Cloudbb.Web.Data.Model;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using Wkg.EntityFrameworkCore.Configuration.Policies.Defaults.EntityNamingPolicies;
+using Wkg.EntityFrameworkCore.Configuration.Policies.Defaults.InheritanceValidationPolicies;
 using Wkg.EntityFrameworkCore.Configuration.Policies.Defaults.PropertyMappingPolicies;
 using Wkg.EntityFrameworkCore.Extensions;
 
@@ -11,16 +13,22 @@ public sealed class ApplicationDbContext(DbContextOptions<ApplicationDbContext> 
 {
     protected override void OnModelCreating(ModelBuilder builder)
     {
+        ArgumentNullException.ThrowIfNull(builder);
+
         base.OnModelCreating(builder);
 
         // TODO: use source generated model discovery once Wkg.EntityFrameworkCore v10.0 is published (currently expired NuGet API keys)
         builder.LoadReflectiveModels(modelOptions => modelOptions
             .ConfigurePolicies(policies => policies
                 .AddPolicy<EntityNaming>(naming => naming.RequireExplicit())
-                .AddPolicy<PropertyMapping>(mapping => mapping.RequireExplicit())));
+                .AddPolicy<PropertyMapping>(mapping => mapping.RequireExplicit())
+                .AddPolicy<EntityInheritanceValidation>(entity => entity
+                    .MustExtend<CloudbbEntity>()
+                    .UnlessExtends<ICloudbbConnectionEntity>())));
 
         // TODO: use Wkg.EntityFrameworkCore v10.0 data seeding
         builder.Entity<IdentityRole>().HasData(
+        [
             new IdentityRole
             {
                 Id = "019ae512-ae98-7973-8de5-7e654298ec4b",
@@ -34,6 +42,7 @@ public sealed class ApplicationDbContext(DbContextOptions<ApplicationDbContext> 
                 ConcurrencyStamp = "bc86bddf-c568-4f39-91a2-330595964e90",
                 Name = "user",
                 NormalizedName = "USER"
-            });
+            }
+        ]);
     }
 }

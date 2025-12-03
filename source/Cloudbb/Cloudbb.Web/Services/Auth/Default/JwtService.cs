@@ -1,7 +1,9 @@
+﻿using Cloudbb.Web.Data.Model;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
+using Wkg.Common.Extensions;
 
 namespace Cloudbb.Web.Services.Auth.Default;
 
@@ -9,16 +11,16 @@ internal sealed class JwtService(IConfiguration configuration, IJwtSigningKeyPro
 {
     private readonly JwtSecurityTokenHandler _tokenHandler = new();
 
-    public async ValueTask<string> GenerateTokenAsync(IdentityUser user, IEnumerable<string> roles, CancellationToken cancellationToken = default)
+    public async ValueTask<string> GenerateTokenAsync(CloudbbUser user, IEnumerable<string> roles, CancellationToken cancellationToken = default)
     {
         SecurityKey key = await credentialsFactory.GetKeyAsync(cancellationToken);
         SigningCredentials credentials = new(key, jwtAlgorithmProvider.GetAlgorithm());
 
         Claim[] claims =
         [
-            new(ClaimTypes.NameIdentifier, user.Id),
-            new(ClaimTypes.Name, user.UserName!),
-            new(ClaimTypes.Email, user.Email!),
+            new(ClaimTypes.NameIdentifier, user.Id.ToString()),
+            new(ClaimTypes.Name, user.UserName),
+            new(ClaimTypes.Email, user.Email),
             new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
             new(JwtRegisteredClaimNames.Iat, DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString(), ClaimValueTypes.Integer64),
             .. roles.Select(role => new Claim(ClaimTypes.Role, role)),

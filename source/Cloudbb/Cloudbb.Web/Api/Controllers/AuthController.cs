@@ -1,10 +1,11 @@
-using Cloudbb.Web.Api.Models.Auth;
+﻿using Cloudbb.Web.Api.Models.Auth;
 using Cloudbb.Web.Data;
+using Cloudbb.Web.Data.Model;
 using Cloudbb.Web.Services.Auth;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using System.Security.Claims;
+using Microsoft.EntityFrameworkCore;
 using Wkg.AspNetCore.Abstractions.Controllers;
 using Wkg.AspNetCore.Transactions;
 using SignInResult = Microsoft.AspNetCore.Identity.SignInResult;
@@ -32,13 +33,13 @@ public sealed class AuthController(
             return transaction.Rollback(BadRequest(AuthResponse.Failure("Invalid request data")));
         }
 
-        IdentityUser user = new()
+        IdentityUser identityUser = new()
         {
-            UserName = request.Email,
+            UserName = request.UserName,
             Email = request.Email
         };
 
-        IdentityResult result = await userManager.CreateAsync(user, request.Password);
+        IdentityResult result = await userManager.CreateAsync(identityUser, request.Password);
 
         if (!result.Succeeded)
         {
@@ -46,9 +47,15 @@ public sealed class AuthController(
         }
 
         // assign default user role
-        await userManager.AddToRoleAsync(user, "user");
+        await userManager.AddToRoleAsync(identityUser, "user");
 
-        IList<string> roles = await userManager.GetRolesAsync(user);
+        CloudbbUser user = new(identityUser);
+        dbContext.Add(user);
+
+        await dbContext.SaveChangesAsync();
+
+        IList<string> roles = await userManager.GetRolesAsync(identityUser);
+
         string token = await jwtService.GenerateTokenAsync(user, roles);
         double expirationMinutes = double.Parse(configuration["Auth:Jwt:ExpirationMinutes"]!);
 
@@ -64,15 +71,20 @@ public sealed class AuthController(
             return transaction.Rollback(BadRequest(AuthResponse.Failure("Invalid request data")));
         }
 
-        IdentityUser? user = await userManager.FindByEmailAsync(request.Email);
-        if (user == null)
+        string normalizedEmail = userManager.NormalizeEmail(request.Email);
+
+        CloudbbUser? user = await dbContext.Set<CloudbbUser>()
+            .Include(u => u.IdentityUser)
+            .FirstOrDefaultAsync(u => u.IdentityUser.NormalizedEmail == normalizedEmail);
+
+        if (user is not { IdentityUser: { } identityUser })
         {
             // avoid user enumeration through timing attacks
             await timingRandomizationService.DelayAsync(configuration.GetValue<TimeSpan>("Auth:MaxSideChannelTimingDelay"), cancellationToken);
             return transaction.Rollback(Unauthorized(AuthResponse.Failure("Invalid email or password")));
         }
 
-        SignInResult result = await signInManager.CheckPasswordSignInAsync(user, request.Password, lockoutOnFailure: true);
+        SignInResult result = await signInManager.CheckPasswordSignInAsync(identityUser, request.Password, lockoutOnFailure: true);
 
         if (!result.Succeeded)
         {
@@ -82,7 +94,8 @@ public sealed class AuthController(
             return transaction.Commit(Unauthorized(AuthResponse.Failure("Invalid email or password")));
         }
 
-        IList<string> roles = await userManager.GetRolesAsync(user);
+        IList<string> roles = await userManager.GetRolesAsync(identityUser);
+
         string token = await jwtService.GenerateTokenAsync(user, roles);
         double expirationMinutes = double.Parse(configuration["Auth:Jwt:ExpirationMinutes"]!);
 
@@ -95,32 +108,5 @@ public sealed class AuthController(
     {
         await signInManager.SignOutAsync();
         return transaction.Commit(Ok(new { Message = "Logout successful" }));
-    });
-
-    [Authorize]
-    [HttpGet("profile")]
-    public async Task<IActionResult> GetProfileAsync() => await Transaction.Scoped.RunReadOnlyAsync(async dbContext =>
-    {
-        string? userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        if (userId == null)
-        {
-            return Unauthorized();
-        }
-
-        IdentityUser? user = await userManager.FindByIdAsync(userId);
-        if (user == null)
-        {
-            return NotFound();
-        }
-
-        IList<string> roles = await userManager.GetRolesAsync(user);
-
-        return Ok(new
-        {
-            user.Id,
-            user.Email,
-            user.UserName,
-            Roles = roles
-        });
     });
 }

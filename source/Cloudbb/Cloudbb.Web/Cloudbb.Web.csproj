@@ -27,8 +27,4 @@
 		<PackageReference Include="Wkg.AspNetCore" Version="10.0.18971-rc" />
 		<PackageReference Include="Wkg.EntityFrameworkCore" Version="10.0.18979-rc" />
 	</ItemGroup>
-
-	<ItemGroup>
-	  <Folder Include="Data\Model\" />
-	</ItemGroup>
 </Project>
