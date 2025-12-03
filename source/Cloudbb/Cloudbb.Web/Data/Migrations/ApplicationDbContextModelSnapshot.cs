@@ -17,7 +17,7 @@ namespace Cloudbb.Web.Data.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.0")
+                .HasAnnotation("ProductVersion", "9.0.11")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -53,14 +53,14 @@ namespace Cloudbb.Web.Data.Migrations
                             Id = "019ae512-ae98-7973-8de5-7e654298ec4b",
                             ConcurrencyStamp = "828439b8-c96e-48c1-860d-62076f394c76",
                             Name = "admin",
-                            NormalizedName = "admin"
+                            NormalizedName = "ADMIN"
                         },
                         new
                         {
                             Id = "019ae512-d047-7708-b68e-a0e24a6ced56",
                             ConcurrencyStamp = "bc86bddf-c568-4f39-91a2-330595964e90",
                             Name = "user",
-                            NormalizedName = "user"
+                            NormalizedName = "USER"
                         });
                 });
 
