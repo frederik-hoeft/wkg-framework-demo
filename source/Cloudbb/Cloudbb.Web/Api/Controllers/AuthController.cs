@@ -1,10 +1,13 @@
+using Cloudbb.Web.Api.Models.Auth;
+using Cloudbb.Web.Data;
+using Cloudbb.Web.Services.Auth;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using SignInResult = Microsoft.AspNetCore.Identity.SignInResult;
-using Cloudbb.Web.Api.Models.Auth;
-using Cloudbb.Web.Services.Auth;
 using System.Security.Claims;
+using Wkg.AspNetCore.Abstractions.Controllers;
+using Wkg.AspNetCore.Transactions;
+using SignInResult = Microsoft.AspNetCore.Identity.SignInResult;
 
 namespace Cloudbb.Web.Api.Controllers;
 
@@ -15,15 +18,18 @@ public sealed class AuthController(
     SignInManager<IdentityUser> signInManager,
     IJwtService jwtService,
     IConfiguration configuration,
-    ITimingRandomizationService timingRandomizationService
-) : ControllerBase
+    ITimingRandomizationService timingRandomizationService,
+    ITransactionServiceHandle transactionServiceHandle
+) : DatabaseController<ApplicationDbContext>(transactionServiceHandle)
 {
     [HttpPost("register")]
-    public async Task<IActionResult> RegisterAsync([FromBody] RegisterRequest request)
+    // TODO: add proper support for cancellation tokens in Wkg.AspNetCore with the .NET 10 migration
+    public async Task<IActionResult> RegisterAsync([FromBody] RegisterRequest request) => await Transaction.Scoped.RunAsync(async (dbContext, transaction) =>
     {
+        ArgumentNullException.ThrowIfNull(request);
         if (!ModelState.IsValid)
         {
-            return BadRequest(AuthResponse.Failure("Invalid request data"));
+            return transaction.Rollback(BadRequest(AuthResponse.Failure("Invalid request data")));
         }
 
         IdentityUser user = new()
@@ -36,25 +42,26 @@ public sealed class AuthController(
 
         if (!result.Succeeded)
         {
-            return BadRequest(AuthResponse.Failure(string.Join("; ", result.Errors.Select(e => e.Description))));
+            return transaction.Rollback(BadRequest(AuthResponse.Failure(string.Join("; ", result.Errors.Select(e => e.Description)))));
         }
 
-        // Optionally assign default role
-        await userManager.AddToRoleAsync(user, "User");
+        // assign default user role
+        await userManager.AddToRoleAsync(user, "user");
 
         IList<string> roles = await userManager.GetRolesAsync(user);
         string token = jwtService.GenerateToken(user, roles);
         double expirationMinutes = double.Parse(configuration["Auth:Jwt:ExpirationMinutes"]!);
 
-        return Ok(AuthResponse.Success(token, DateTime.UtcNow.AddMinutes(expirationMinutes)));
-    }
+        return transaction.Commit(Ok(AuthResponse.Success(token, DateTime.UtcNow.AddMinutes(expirationMinutes))));
+    });
 
     [HttpPost("login")]
-    public async Task<IActionResult> LoginAsync([FromBody] LoginRequest request, CancellationToken cancellationToken)
+    public async Task<IActionResult> LoginAsync([FromBody] LoginRequest request, CancellationToken cancellationToken) => await Transaction.Scoped.RunAsync(async (dbContext, transaction) =>
     {
+        ArgumentNullException.ThrowIfNull(request);
         if (!ModelState.IsValid)
         {
-            return BadRequest(AuthResponse.Failure("Invalid request data"));
+            return transaction.Rollback(BadRequest(AuthResponse.Failure("Invalid request data")));
         }
 
         IdentityUser? user = await userManager.FindByEmailAsync(request.Email);
@@ -62,7 +69,7 @@ public sealed class AuthController(
         {
             // avoid user enumeration through timing attacks
             await timingRandomizationService.DelayAsync(configuration.GetValue<TimeSpan>("Auth:MaxSideChannelTimingDelay"), cancellationToken);
-            return Unauthorized(AuthResponse.Failure("Invalid email or password"));
+            return transaction.Rollback(Unauthorized(AuthResponse.Failure("Invalid email or password")));
         }
 
         SignInResult result = await signInManager.CheckPasswordSignInAsync(user, request.Password, lockoutOnFailure: true);
@@ -71,27 +78,28 @@ public sealed class AuthController(
         {
             // avoid user enumeration through timing attacks
             await timingRandomizationService.DelayAsync(configuration.GetValue<TimeSpan>("Auth:MaxSideChannelTimingDelay"), cancellationToken);
-            return Unauthorized(AuthResponse.Failure("Invalid email or password"));
+            // must be commit since we need to record the failed login attempt for lockout purposes
+            return transaction.Commit(Unauthorized(AuthResponse.Failure("Invalid email or password")));
         }
 
         IList<string> roles = await userManager.GetRolesAsync(user);
         string token = jwtService.GenerateToken(user, roles);
-        double expirationMinutes = double.Parse(configuration["Jwt:ExpirationMinutes"]!);
+        double expirationMinutes = double.Parse(configuration["Auth:Jwt:ExpirationMinutes"]!);
 
-        return Ok(AuthResponse.Success(token, DateTime.UtcNow.AddMinutes(expirationMinutes)));
-    }
+        return transaction.Commit(Ok(AuthResponse.Success(token, DateTime.UtcNow.AddMinutes(expirationMinutes))));
+    });
 
-    [HttpPost("logout")]
     [Authorize]
-    public async Task<IActionResult> LogoutAsync()
+    [HttpPost("logout")]
+    public async Task<IActionResult> LogoutAsync() => await Transaction.Scoped.RunAsync(async (dbContext, transaction) =>
     {
         await signInManager.SignOutAsync();
-        return Ok(new { Message = "Logout successful" });
-    }
+        return transaction.Commit(Ok(new { Message = "Logout successful" }));
+    });
 
-    [HttpGet("profile")]
     [Authorize]
-    public async Task<IActionResult> GetProfileAsync()
+    [HttpGet("profile")]
+    public async Task<IActionResult> GetProfileAsync() => await Transaction.Scoped.RunReadOnlyAsync(async dbContext =>
     {
         string? userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         if (userId == null)
@@ -114,5 +122,5 @@ public sealed class AuthController(
             user.UserName,
             Roles = roles
         });
-    }
+    });
 }

@@ -6,6 +6,8 @@ using System.Text;
 using Cloudbb.Web.Data;
 using Cloudbb.Web.Services.Auth;
 using Cloudbb.Web.Services.Auth.Default;
+using Wkg.AspNetCore.Transactions.Configuration;
+using System.Data;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
@@ -55,6 +57,9 @@ builder.Services.AddAuthentication(options =>
 });
 
 builder.Services.AddAuthorization();
+
+builder.Services.AddTransactionManagement<ApplicationDbContext>(transactionOptions => transactionOptions
+    .UseIsolationLevel(IsolationLevel.ReadCommitted));
 
 builder.Services.AddScoped<IJwtService, JwtService>();
 builder.Services.AddSingleton<ITimingRandomizationService, CsprngTimingRandomizationService>();

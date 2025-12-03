@@ -10,7 +10,7 @@ using static GlobalSuppressions;
     "CA1515:Consider making public types internal",
     Justification = "API project needs to expose controllers",
     Scope = "namespaceanddescendants",
-    Target = "~N:Cloudbb.Web.Api")]
+    Target = "~N:Cloudbb.Web")]
 
 // Suppressions for EF Core generated code
 [assembly: SuppressMessage("Style", "IDE0161:Convert to file-scoped namespace", Justification = EF_GENERATED_CODE, Scope = "namespaceanddescendants", Target = "~N:Cloudbb.Web.Data.Migrations")]

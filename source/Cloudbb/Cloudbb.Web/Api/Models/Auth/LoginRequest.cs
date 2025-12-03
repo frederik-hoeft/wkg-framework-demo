@@ -4,6 +4,6 @@ namespace Cloudbb.Web.Api.Models.Auth;
 
 public sealed record LoginRequest
 (
-    [property: Required][property: EmailAddress] string Email,
-    [property: Required] string Password
+    [Required][EmailAddress] string Email,
+    [Required] string Password
 );

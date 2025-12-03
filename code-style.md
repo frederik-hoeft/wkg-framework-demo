@@ -1,6 +1,6 @@
 # C# Coding Style Guidelines
 
-This document describes the preferred C# coding style in our projects. It is based on the [.NET Runtime Coding Style](https://github.com/dotnet/runtime/blob/main/docs/coding-guidelines/coding-style.md) with some targeted modifications to improve readability and maintainability of the codebases as well as to reduce potential for bugs being overlooked in code review.
+This document describes the preferred C# coding style in our projects. It is based on the [.NET Runtime Coding Style](https://github.com/dotnet/runtime/blob/main/docs/coding-guidelines/coding-style.md) with some targeted modifications to improve readability and maintainability of the codebases, as well as to reduce potential for bugs being overlooked in code review.
 
 The goal of this document is to provide a modern and consistent coding style across the codebase, reducing boilerplate where possible, while considering the readability and maintainability of the code, especially for code reviews where no intellisense or other tool-assisted context is available. The fundamental principle is that the code should be easy to read and understand at a glance, without having to search for the type of a variable or method return type. Similarly, it should be easy to distinguish between constants, fields, properties, statics, and other types of members.
 
@@ -19,12 +19,13 @@ The general rules we follow are "use Visual Studio defaults" and "readability ov
     - static fields have an `s_` prefix to distinguish them from instance fields: `s_camelCase`.
     - thread static fields have a `t_` prefix to clearly indicate their scope: `t_camelCase`.
     - thread-local instance fields have a `_th_` prefix to clearly indicate their scope: `_th_camelCase`.
+    - async-local instance fields have a `_al_` prefix to clearly indicate their scope: `_al_camelCase`. This can be combined with the static prefix for static async-local fields: `s_al_camelCase`.
     - all compile-time constants are in `SCREAMING_SNAKE_CASE` to communicate their immutability and distinguish them from properties.
-4. We restrict visibility and modification as much as possible: hiding implementation details from the outside my making them `private` or `internal`, and declaring fields as `readonly` where possible. This communicates the intent of the code and reduces the risk of accidental modification.
+4. We restrict visibility and modification as much as possible: hiding implementation details from the outside by making them `private` or `internal`, and declaring fields as `readonly` where possible. This communicates the intent of the code and reduces the risk of accidental modification.
 5. We avoid `this.` unless when accessing primary constructor parameters for a clear distinction between fields and locals.
 6. We always specify the visibility, even if it's the default (e.g. `private string _foo` not `string _foo`). Visibility should be the first modifier (e.g. `public abstract` not `abstract public`).
 7. Namespace imports should be specified at the top of the file, *outside* of `namespace` declarations, and should be sorted alphabetically. We use file-scoped namespaces (`namespace Foo;` instead of `namespace Foo {...}`) to avoid excessive indentation.
-8. Avoid more than one empty line as well as any number of trailing white spaces. Enable 'View White Space' in Visual Studio to detect these issues.
+8. Avoid more than one empty line, as well as any number of trailing white spaces. Enable 'View White Space' in Visual Studio to detect these issues.
 9. File names should be named after the type they contain, for example `class Foo` should be in `Foo.cs`. Every file should contain at most one top-level type, although it may contain nested types and additional file-local type (e.g. `class Foo { class Bar { } }` and `class Foo {} file class Bar {}`).
     - except: when working with very tightly coupled types, where it makes sense to have them in the same file for easier navigation and understanding. In such cases, it is acceptable to have multiple top-level types in the same file.
     - except: when working generic types that would conflict with non-generic types of the same name, append `.T` to the file name, e.g. `class Foo` in `Foo.cs` and `class Foo<T>` in `Foo.T.cs`. If multiple generic types exist, use `.T1`, `.T2`, etc, where the number corresponds to the number of generic type parameters, e.g. `class Foo<T>` in `Foo.T1.cs` and `class Foo<TKey, TValue>` in `Foo.T2.cs`.
@@ -34,12 +35,12 @@ The general rules we follow are "use Visual Studio defaults" and "readability ov
     [HttpGet]
     public IActionResult GetFoo()
     {
-        // we expect foo to be a Foo but it's actually a Task that was never awaited :C
         var foo = dbContext.Set<Foo>().FirstOrDefaultAsync();
         if (foo == null)
         {
             return NotFound();
         }
+        // we expect foo to be a Foo but it's actually a Task that was never awaited :C
         return Ok(foo);
     }
     ```

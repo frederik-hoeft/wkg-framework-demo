@@ -2,7 +2,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace Cloudbb.Web.Api.Models.Auth;
 
-public sealed class RegisterRequest
+public sealed record RegisterRequest
 {
     [Required]
     [EmailAddress]
