@@ -8,10 +8,13 @@ using Cloudbb.Web.Services.Auth;
 using Cloudbb.Web.Services.Auth.Default;
 using Wkg.AspNetCore.Transactions.Configuration;
 using System.Data;
+using Wkg.EntityFrameworkCore.Configuration;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
 // Add Entity Framework
+// use source-generated model discovery for better startup performance and compile-time model validation
+builder.Services.AddSingleton<IModelLoader, ApplicationModelLoader>();
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DatabaseConnection")));
 

@@ -4,7 +4,7 @@ using Wkg.EntityFrameworkCore.Configuration;
 
 namespace Cloudbb.Web.Data.Model;
 
-public sealed class CloudbbPost() : CloudbbEntity, IReflectiveModelConfiguration<CloudbbPost>
+public sealed class CloudbbPost() : CloudbbEntity, IDiscoverableModelConfiguration<CloudbbPost>
 {
     public Guid UserId { get; set; }
 

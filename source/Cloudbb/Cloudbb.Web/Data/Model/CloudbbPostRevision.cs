@@ -5,7 +5,7 @@ using Wkg.EntityFrameworkCore.Configuration;
 
 namespace Cloudbb.Web.Data.Model;
 
-public sealed class CloudbbPostRevision() : CloudbbEntity, IReflectiveModelConfiguration<CloudbbPostRevision>
+public sealed class CloudbbPostRevision() : CloudbbEntity, IDiscoverableModelConfiguration<CloudbbPostRevision>
 {
     [SetsRequiredMembers]
     public CloudbbPostRevision(string title, string content) : this()

@@ -7,7 +7,7 @@ using Wkg.EntityFrameworkCore.Configuration;
 
 namespace Cloudbb.Web.Data.Model;
 
-public sealed class CloudbbUser() : CloudbbEntity, IReflectiveModelConfiguration<CloudbbUser>
+public sealed class CloudbbUser() : CloudbbEntity, IDiscoverableModelConfiguration<CloudbbUser>
 {
     [SetsRequiredMembers]
     public CloudbbUser(IdentityUser identityUser) : this()

@@ -26,5 +26,8 @@
 		<PackageReference Include="Wkg" Version="10.0.18957-rc" />
 		<PackageReference Include="Wkg.AspNetCore" Version="10.0.18971-rc" />
 		<PackageReference Include="Wkg.EntityFrameworkCore" Version="10.0.18979-rc" />
+		<!-- TODO: replace with Wkg.EntityFrameworkCore.Discovery.SourceGeneration once it has cleared internal review -->
+		<!-- TODO: (unofficial preview package) remove once official package is available -->
+		<PackageReference Include="019af44d1e9c73358e4519cf0d08516d" Version="10.0.18980" />
 	</ItemGroup>
 </Project>

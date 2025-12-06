@@ -4,7 +4,7 @@ using Wkg.EntityFrameworkCore.Configuration;
 
 namespace Cloudbb.Web.Data.Model;
 
-public sealed class CloudbbCommentVote() : CloudbbVote, IReflectiveModelConfiguration<CloudbbCommentVote>
+public sealed class CloudbbCommentVote() : CloudbbVote, IDiscoverableModelConfiguration<CloudbbCommentVote>
 {
     public Guid CommentId { get; set; }
 

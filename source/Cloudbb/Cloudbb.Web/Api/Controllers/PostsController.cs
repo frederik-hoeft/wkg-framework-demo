@@ -21,7 +21,7 @@ public sealed class PostsController
 {
     [HttpGet]
     // TODO: paging + search options
-    public async Task<IActionResult> GetPostsAsync(string? tz = null, TimeSpan? tzoffset = null) => await Transaction.Scoped.RunReadOnlyAsync(async dbContext =>
+    public async Task<IActionResult> GetPostsAsync(string? tz = null, TimeSpan? tzoffset = null, CancellationToken cancellationToken = default) => await Transaction.Scoped.RunReadOnlyAsync(async (dbContext, ct) =>
     {
         TimeZoneInfo tzinfo = ParseUserLocalTime(tz, tzoffset);
         List<PostListEntry> posts = await dbContext.Set<CloudbbPost>()
@@ -49,13 +49,12 @@ public sealed class PostsController
                 // a post is considered edited if it has more than one revision
                 postInfo.Post.Revisions.Count > 1
             ))
-            .ToListAsync();
+            .ToListAsync(ct);
         return Ok(posts);
-    });
+    }, cancellationToken);
 
     [HttpPost("create")]
-    // TODO: add CancellationToken support to Wkg.AspNetCore transaction management
-    public async Task<IActionResult> CreatePostAsync([FromBody] PostCreationRequest request) => await Transaction.Scoped.RunAsync(async (dbContext, transaction) =>
+    public async Task<IActionResult> CreatePostAsync([FromBody] PostCreationRequest request, CancellationToken cancellationToken) => await Transaction.Scoped.RunAsync(async (dbContext, transaction, ct) =>
     {
         ArgumentNullException.ThrowIfNull(request);
         if (!ModelState.IsValid)
@@ -74,11 +73,11 @@ public sealed class PostsController
             UserId = userId
         };
         dbContext.Add(post);
-        await dbContext.SaveChangesAsync();
+        await dbContext.SaveChangesAsync(ct);
 
         PostCreationResponse response = new(post.Id);
         return transaction.Commit(Ok(response));
-    });
+    }, cancellationToken);
 
     private static TimeZoneInfo ParseUserLocalTime(string? tz = null, TimeSpan? tzoffset = null)
     {

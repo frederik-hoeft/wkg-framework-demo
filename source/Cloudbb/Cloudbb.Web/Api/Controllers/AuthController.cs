@@ -24,8 +24,7 @@ public sealed class AuthController(
 ) : DatabaseController<ApplicationDbContext>(transactionServiceHandle)
 {
     [HttpPost("register")]
-    // TODO: add proper support for cancellation tokens in Wkg.AspNetCore with the .NET 10 migration
-    public async Task<IActionResult> RegisterAsync([FromBody] RegisterRequest request) => await Transaction.Scoped.RunAsync(async (dbContext, transaction) =>
+    public async Task<IActionResult> RegisterAsync([FromBody] RegisterRequest request, CancellationToken cancellationToken) => await Transaction.Scoped.RunAsync(async (dbContext, transaction, ct) =>
     {
         ArgumentNullException.ThrowIfNull(request);
         if (!ModelState.IsValid)
@@ -52,7 +51,7 @@ public sealed class AuthController(
         CloudbbUser user = new(identityUser);
         dbContext.Add(user);
 
-        await dbContext.SaveChangesAsync();
+        await dbContext.SaveChangesAsync(ct);
 
         IList<string> roles = await userManager.GetRolesAsync(identityUser);
 
@@ -60,10 +59,10 @@ public sealed class AuthController(
         double expirationMinutes = double.Parse(configuration["Auth:Jwt:ExpirationMinutes"]!);
 
         return transaction.Commit(Ok(AuthResponse.Success(token, DateTime.UtcNow.AddMinutes(expirationMinutes))));
-    });
+    }, cancellationToken);
 
     [HttpPost("login")]
-    public async Task<IActionResult> LoginAsync([FromBody] LoginRequest request, CancellationToken cancellationToken) => await Transaction.Scoped.RunAsync(async (dbContext, transaction) =>
+    public async Task<IActionResult> LoginAsync([FromBody] LoginRequest request, CancellationToken cancellationToken) => await Transaction.Scoped.RunAsync(async (dbContext, transaction, ct) =>
     {
         ArgumentNullException.ThrowIfNull(request);
         if (!ModelState.IsValid)
@@ -75,12 +74,12 @@ public sealed class AuthController(
 
         CloudbbUser? user = await dbContext.Set<CloudbbUser>()
             .Include(u => u.IdentityUser)
-            .FirstOrDefaultAsync(u => u.IdentityUser.NormalizedEmail == normalizedEmail);
+            .FirstOrDefaultAsync(u => u.IdentityUser.NormalizedEmail == normalizedEmail, ct);
 
         if (user is not { IdentityUser: { } identityUser })
         {
             // avoid user enumeration through timing attacks
-            await timingRandomizationService.DelayAsync(configuration.GetValue<TimeSpan>("Auth:MaxSideChannelTimingDelay"), cancellationToken);
+            await timingRandomizationService.DelayAsync(configuration.GetValue<TimeSpan>("Auth:MaxSideChannelTimingDelay"), ct);
             return transaction.Rollback(Unauthorized(AuthResponse.Failure("Invalid email or password")));
         }
 
@@ -89,7 +88,7 @@ public sealed class AuthController(
         if (!result.Succeeded)
         {
             // avoid user enumeration through timing attacks
-            await timingRandomizationService.DelayAsync(configuration.GetValue<TimeSpan>("Auth:MaxSideChannelTimingDelay"), cancellationToken);
+            await timingRandomizationService.DelayAsync(configuration.GetValue<TimeSpan>("Auth:MaxSideChannelTimingDelay"), ct);
             // must be commit since we need to record the failed login attempt for lockout purposes
             return transaction.Commit(Unauthorized(AuthResponse.Failure("Invalid email or password")));
         }
@@ -100,13 +99,13 @@ public sealed class AuthController(
         double expirationMinutes = double.Parse(configuration["Auth:Jwt:ExpirationMinutes"]!);
 
         return transaction.Commit(Ok(AuthResponse.Success(token, DateTime.UtcNow.AddMinutes(expirationMinutes))));
-    });
+    }, cancellationToken);
 
     [Authorize]
     [HttpPost("logout")]
-    public async Task<IActionResult> LogoutAsync() => await Transaction.Scoped.RunAsync(async (dbContext, transaction) =>
+    public async Task<IActionResult> LogoutAsync(CancellationToken cancellationToken) => await Transaction.Scoped.RunAsync(async (dbContext, transaction, ct) =>
     {
         await signInManager.SignOutAsync();
         return transaction.Commit(Ok(new { Message = "Logout successful" }));
-    });
+    }, cancellationToken);
 }

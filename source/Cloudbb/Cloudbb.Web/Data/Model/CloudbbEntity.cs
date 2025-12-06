@@ -4,11 +4,11 @@ using Wkg.EntityFrameworkCore.Configuration;
 
 namespace Cloudbb.Web.Data.Model;
 
-public abstract class CloudbbEntity : IReflectiveBaseModelConfiguration<CloudbbEntity>
+public abstract class CloudbbEntity : IDiscoverableBaseModelConfiguration<CloudbbEntity>
 {
     public Guid Id { get; set; }
 
-    static void IReflectiveBaseModelConfiguration<CloudbbEntity>.ConfigureBaseModel<TChildClass>(EntityTypeBuilder<TChildClass> self)
+    static void IBaseModelConfiguration<CloudbbEntity>.ConfigureBaseModel<TChildClass>(EntityTypeBuilder<TChildClass> self)
     {
         ArgumentNullException.ThrowIfNull(self);
 

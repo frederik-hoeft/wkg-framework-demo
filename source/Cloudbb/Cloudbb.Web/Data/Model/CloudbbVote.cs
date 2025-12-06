@@ -4,7 +4,7 @@ using Wkg.EntityFrameworkCore.Configuration;
 
 namespace Cloudbb.Web.Data.Model;
 
-public abstract class CloudbbVote : ICloudbbConnectionEntity, IReflectiveBaseModelConfiguration<CloudbbVote>
+public abstract class CloudbbVote : ICloudbbConnectionEntity, IDiscoverableBaseModelConfiguration<CloudbbVote>
 {
     public Guid UserId { get; set; }
 
@@ -12,7 +12,7 @@ public abstract class CloudbbVote : ICloudbbConnectionEntity, IReflectiveBaseMod
 
     public CloudbbUser User { get; set; } = null!;
 
-    static void IReflectiveBaseModelConfiguration<CloudbbVote>.ConfigureBaseModel<TChildClass>(EntityTypeBuilder<TChildClass> self)
+    static void IBaseModelConfiguration<CloudbbVote>.ConfigureBaseModel<TChildClass>(EntityTypeBuilder<TChildClass> self)
     {
         ArgumentNullException.ThrowIfNull(self);
 
