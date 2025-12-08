@@ -61,31 +61,34 @@ construct-version:
     paths:
       - app
 
-container-build:
-  image: quay.io/buildah/stable:v1.42.1
+deploy-container-image:
   stage: deploy
+  image:
+    name: gcr.io/kaniko-project/executor:v1.23.0-debug
+    entrypoint: ["/busybox/sh", "-c"]
+  needs:
+    - construct-version
   variables:
-    STORAGE_DRIVER: vfs
-    BUILDAH_FORMAT: docker
     DOCKER_CONTEXT_PATH: "${SOURCE_CODE_PATH}"
     DOCKERFILE_PATH: "${SOURCE_CODE_PATH}/Cloudbb.Web/Dockerfile"
-  before_script:
-    - buildah version
-    - export HOME="${CI_BUILDS_DIR}"
-    - echo "$CI_REGISTRY_PASSWORD" | buildah login -u "$CI_REGISTRY_USER" --password-stdin "$CI_REGISTRY"
   script:
+    - export VERSION="$(cat app/version.txt)"
     - |
-      set -euvo pipefail
-      export VERSION="$(cat app/version.txt)"
       if [ -z "$VERSION" ]; then
-        echo "Version file is empty!"
+        echo "Version file was empty!"
         exit 1
       fi
-      # inject version info into build context
-      echo "${VERSION}" | tee "${DOCKER_CONTEXT_PATH}/CI_VERSION_INFO"
-      # build image from Dockerfile with Buildah
-      buildah bud \
-        -f "${DOCKERFILE_PATH}" \
-        -t "${CI_REGISTRY_IMAGE}:${VERSION}" \
-        "${DOCKER_CONTEXT_PATH}"
-      buildah push "${CI_REGISTRY_IMAGE}:${VERSION}"
+    # inject version info into build context
+    - echo "${VERSION}" | tee "${DOCKER_CONTEXT_PATH}/CI_VERSION_INFO"
+    - mkdir -p /kaniko/.docker
+    - |
+      set -euvo pipefail
+      echo "{\"auths\":{\"$CI_REGISTRY\":{\"auth\":\"$(printf "%s:%s" "${CI_REGISTRY_USER}" "${CI_REGISTRY_PASSWORD}" | base64 | tr -d '\n')\"}}}" > /kaniko/.docker/config.json
+    - |
+      set -euvo pipefail
+      # only set latest tag for main branch builds
+      if [ "$CI_COMMIT_REF_SLUG" != "main" ]; then
+        /kaniko/executor --context "${DOCKER_CONTEXT_PATH}" --dockerfile "${DOCKERFILE_PATH}" --destination "${CI_REGISTRY_IMAGE}:${VERSION}"
+      else
+        /kaniko/executor --context "${DOCKER_CONTEXT_PATH}" --dockerfile "${DOCKERFILE_PATH}" --destination "${CI_REGISTRY_IMAGE}:${VERSION}" --destination "${CI_REGISTRY_IMAGE}:latest"
+      fi
