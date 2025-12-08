@@ -1,36 +1,91 @@
-image: mcr.microsoft.com/dotnet/sdk:10.0-alpine
+stages:
+  - build
+  - test
+  - prepare-deploy
+  - deploy
 
 variables:
+  DOTNET_SDK_TAG: '10.0-alpine'
   OBJECTS_DIRECTORY: 'artifacts/obj'
   NUGET_PACKAGES_DIRECTORY: '.nuget'
   SOURCE_CODE_PATH: './source/Cloudbb'
+  MAJOR_VERSION: '0'
+  MINOR_VERSION: '1'
 
-cache:
-  # Per-stage and per-branch caching.
-  key: "$CI_JOB_STAGE-$CI_COMMIT_REF_SLUG"
-  paths:
-    # Main JSON file holding information about package dependency tree, packages versions,
-    - '$SOURCE_CODE_PATH/$OBJECTS_DIRECTORY/*/project.assets.json'
-    # Other NuGet and MSBuild related files. Also needed.
-    - '$SOURCE_CODE_PATH/$OBJECTS_DIRECTORY/*/*.csproj.nuget.*'
-    # Path to the directory where restored dependencies are kept.
-    - '$NUGET_PACKAGES_DIRECTORY'
-  policy: pull-push
-
-before_script:
-  - 'dotnet restore "${SOURCE_CODE_PATH}" --packages "${NUGET_PACKAGES_DIRECTORY}"'
+.dotnet-base:
+  image: "mcr.microsoft.com/dotnet/sdk:${DOTNET_SDK_TAG}"
+  cache:
+    # Per-stage and per-branch caching.
+    key: "$CI_JOB_STAGE-$CI_COMMIT_REF_SLUG"
+    paths:
+      # Main JSON file holding information about package dependency tree, packages versions,
+      - '$SOURCE_CODE_PATH/$OBJECTS_DIRECTORY/*/project.assets.json'
+      # Other NuGet and MSBuild related files. Also needed.
+      - '$SOURCE_CODE_PATH/$OBJECTS_DIRECTORY/*/*.csproj.nuget.*'
+      # Path to the directory where restored dependencies are kept.
+      - '$NUGET_PACKAGES_DIRECTORY'
+    policy: pull-push
+  before_script:
+    - 'dotnet restore "${SOURCE_CODE_PATH}" --packages "${NUGET_PACKAGES_DIRECTORY}"'
 
 build:
+  extends: .dotnet-base
   stage: build
   script:
     - 'dotnet build "${SOURCE_CODE_PATH}" --no-restore'
 
 tests:
+  extends: .dotnet-base
   stage: test
   script:
     - 'dotnet test "${SOURCE_CODE_PATH}" --no-restore'
 
+construct-version:
+  image: debian:trixie-slim
+  stage: prepare-deploy
+  artifacts:
+    paths:
+      - /app/version.txt
+  variables:
+    VERSION: "${MAJOR_VERSION}.${MINOR_VERSION}.${CI_PIPELINE_IID}"
+  script:
+    - |
+      set -euvo pipefail
+      mkdir -p /app
+      # check if we're on main. if not, append branch or tag name as pre-release label
+      PRE_RELEASE_LABEL=""
+      if [ "${CI_COMMIT_REF_NAME}" != "main" ]; then
+        SANITIZED_REF_NAME="$(echo "${CI_COMMIT_REF_NAME}" | tr -c '[:alnum:]' '-')"
+        PRE_RELEASE_LABEL="-${SANITIZED_REF_NAME}"
+      fi
+      FULL_VERSION="${VERSION}${PRE_RELEASE_LABEL}"
+      echo $"{FULL_VERSION}" | tee /app/version.txt
+
 deploy:
+  image:
+    name: moby/buildkit:rootless
+    entrypoint: [""]
   stage: deploy
-  script: echo "Define your deployment script!"
-  environment: production
+  dependencies:
+    - construct-version
+  variables:
+    BUILDKITD_FLAGS: --oci-worker-no-process-sandbox
+    DOCKER_CONTEXT_PATH: "${SOURCE_CODE_PATH}"
+    DOCKERFILE_PATH: "${SOURCE_CODE_PATH}/Cloudbb.Web/Dockerfile"
+  before_script:
+    - mkdir -p ~/.docker
+    - echo "{\"auths\":{\"$CI_REGISTRY\":{\"username\":\"$CI_REGISTRY_USER\",\"password\":\"$CI_REGISTRY_PASSWORD\"}}}" > ~/.docker/config.json
+  script:
+    - |
+      set -euvo pipefail
+      export VERSION="$(cat /app/version.txt)"
+      if [ -z "$VERSION" ]; then
+        echo "Version file is empty!"
+        exit 1
+      fi
+      echo "${VERSION}" | tee "${DOCKER_CONTEXT_PATH}/CI_VERSION_INFO"
+      buildctl-daemonless.sh build \
+        --frontend dockerfile.v0 \
+        --local context="${DOCKER_CONTEXT_PATH}" \
+        --local dockerfile="${DOCKERFILE_PATH}" \
+        --output type=image,name=$CI_REGISTRY_IMAGE:$VERSION,push=true

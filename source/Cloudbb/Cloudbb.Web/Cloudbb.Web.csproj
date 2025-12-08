@@ -5,6 +5,9 @@
 		<ImplicitUsings>enable</ImplicitUsings>
 		<UserSecretsId>02764e65-d84b-4cdc-a049-1786ce0c9fbd</UserSecretsId>
 		<DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
+		<!-- CI injected versioning -->
+		<VersionPrefix>0.0.0</VersionPrefix>
+		<VersionSuffix>CI-INJECTED</VersionSuffix>
 	</PropertyGroup>
 
 	<ItemGroup>
