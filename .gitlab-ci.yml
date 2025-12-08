@@ -43,9 +43,6 @@ tests:
 construct-version:
   image: debian:trixie-slim
   stage: prepare-deploy
-  artifacts:
-    paths:
-      - /app/version.txt
   script:
     - |
       set -euvo pipefail
@@ -59,7 +56,10 @@ construct-version:
         PRE_RELEASE_LABEL="-${CI_COMMIT_REF_SLUG}"
       fi
       FULL_VERSION="${VERSION}${PRE_RELEASE_LABEL}"
-      echo $"{FULL_VERSION}" | tee /app/version.txt
+      echo "${FULL_VERSION}" | tee /app/version.txt
+  artifacts:
+    paths:
+      - /app
 
 deploy:
   image:
