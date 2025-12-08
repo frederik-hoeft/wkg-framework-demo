@@ -5,7 +5,7 @@ namespace Cloudbb.Web.Services.Auth;
 
 public interface IJwtService
 {
-    string GenerateToken(IdentityUser user, IEnumerable<string> roles);
+    ValueTask<string> GenerateTokenAsync(IdentityUser user, IEnumerable<string> roles, CancellationToken cancellationToken = default);
 
-    ClaimsPrincipal ValidateToken(string token);
+    ValueTask<ClaimsPrincipal> ValidateTokenAsync(string token, CancellationToken cancellationToken = default);
 }

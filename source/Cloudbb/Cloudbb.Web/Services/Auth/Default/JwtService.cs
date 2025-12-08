@@ -2,20 +2,19 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
-using System.Text;
 
 namespace Cloudbb.Web.Services.Auth.Default;
 
-internal sealed class JwtService(IConfiguration configuration) : IJwtService
+internal sealed class JwtService(IConfiguration configuration, IJwtSigningKeyProvider credentialsFactory, IJwtAlgorithmProvider jwtAlgorithmProvider) : IJwtService
 {
     private readonly JwtSecurityTokenHandler _tokenHandler = new();
 
-    public string GenerateToken(IdentityUser user, IEnumerable<string> roles)
+    public async ValueTask<string> GenerateTokenAsync(IdentityUser user, IEnumerable<string> roles, CancellationToken cancellationToken = default)
     {
-        SymmetricSecurityKey key = new(Encoding.UTF8.GetBytes(configuration["Auth:Jwt:Key"]!));
-        SigningCredentials credentials = new(key, SecurityAlgorithms.HmacSha256);
+        SecurityKey key = await credentialsFactory.GetKeyAsync(cancellationToken);
+        SigningCredentials credentials = new(key, jwtAlgorithmProvider.GetAlgorithm());
 
-        List<Claim> claims =
+        Claim[] claims =
         [
             new(ClaimTypes.NameIdentifier, user.Id),
             new(ClaimTypes.Name, user.UserName!),
@@ -29,16 +28,15 @@ internal sealed class JwtService(IConfiguration configuration) : IJwtService
             issuer: configuration["Auth:Jwt:Issuer"],
             audience: configuration["Auth:Jwt:Audience"],
             claims: claims,
-            expires: DateTime.UtcNow.AddMinutes(double.Parse(configuration["Auth:Jwt:ExpirationMinutes"]!)),
+            expires: DateTime.UtcNow.Add(TimeSpan.Parse(configuration["Auth:Jwt:TimeToLive"]!)),
             signingCredentials: credentials);
 
         return _tokenHandler.WriteToken(token);
     }
 
-    public ClaimsPrincipal ValidateToken(string token)
+    public async ValueTask<ClaimsPrincipal> ValidateTokenAsync(string token, CancellationToken cancellationToken = default)
     {
-        SymmetricSecurityKey key = new(Encoding.UTF8.GetBytes(configuration["Auth:Jwt:Key"]!));
-
+        SecurityKey key = await credentialsFactory.GetKeyAsync(cancellationToken);
         TokenValidationParameters validationParameters = new()
         {
             ValidateIssuerSigningKey = true,
@@ -50,7 +48,6 @@ internal sealed class JwtService(IConfiguration configuration) : IJwtService
             ValidateLifetime = true,
             ClockSkew = TimeSpan.Zero
         };
-
         ClaimsPrincipal principal = _tokenHandler.ValidateToken(token, validationParameters, out _);
         return principal;
     }

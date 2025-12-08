@@ -61,6 +61,14 @@ builder.Services.AddAuthorization();
 builder.Services.AddTransactionManagement<ApplicationDbContext>(transactionOptions => transactionOptions
     .UseIsolationLevel(IsolationLevel.ReadCommitted));
 
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//                                            Register application services                                                 //
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// auth services
+//builder.Services.AddSingleton<IJwtECDsaSigningKeyImportService, JwtECDsaPemFileSigningKeyImportService>();
+builder.Services.AddSingleton<IJwtAlgorithmProvider, JwtHmacSha256AlgorithmProvider>();
+builder.Services.AddSingleton<IJwtSigningKeyProvider, JwtSymmetricSigningKeyProvider>();
 builder.Services.AddScoped<IJwtService, JwtService>();
 builder.Services.AddSingleton<ITimingRandomizationService, CsprngTimingRandomizationService>();
 
