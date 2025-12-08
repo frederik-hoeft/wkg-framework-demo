@@ -21,7 +21,7 @@ RUN PROJECT_FILE_PATH='./Cloudbb.Web/Cloudbb.Web.csproj' && \
     DOTNET_CI_VERSION_FILE='./Cloudbb.Web/CloudbbWeb.cs' && \
     if [ -f './CI_VERSION_INFO' ]; then export VERSION=$(cat './CI_VERSION_INFO'); else export VERSION="0.0.0"; fi && \
     export VERSION_PREFIX=$(echo "${VERSION}" | grep -Po '^[0-9]+\.[0-9]+\.[0-9]+') && \
-    export VERSION_SUFFIX=$(echo "${VERSION}" | grep -Po '(?<=-)([A-Za-z0-9]+)') && \
+    export VERSION_SUFFIX=$(echo "${VERSION}" | grep -Po '(?<=-)([A-Za-z0-9\-]+)') && \
     echo "Version Prefix is ${VERSION_PREFIX}" && \
     echo "Version Suffix is ${VERSION_SUFFIX}" && \
     sed -i "s/<VersionPrefix>0\.0\.0<\/VersionPrefix>/<VersionPrefix>${VERSION_PREFIX}<\/VersionPrefix>/" "${PROJECT_FILE_PATH}" && \
