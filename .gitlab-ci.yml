@@ -48,7 +48,7 @@ construct-version:
       set -euvo pipefail
       export VERSION="${MAJOR_VERSION}.${MINOR_VERSION}.${CI_PIPELINE_IID}"
       echo "base version: ${VERSION}"
-      mkdir -p /app
+      mkdir -p app
       # check if we're on main. if not, append branch or tag name as pre-release label
       PRE_RELEASE_LABEL=""
       if [ "${CI_COMMIT_REF_SLUG}" != "main" ]; then
@@ -56,10 +56,10 @@ construct-version:
         PRE_RELEASE_LABEL="-${CI_COMMIT_REF_SLUG}"
       fi
       FULL_VERSION="${VERSION}${PRE_RELEASE_LABEL}"
-      echo "${FULL_VERSION}" | tee /app/version.txt
+      echo "${FULL_VERSION}" | tee app/version.txt
   artifacts:
     paths:
-      - /app
+      - app
 
 deploy:
   image:
@@ -78,9 +78,7 @@ deploy:
   script:
     - |
       set -euvo pipefail
-      # temporary early exit for debugging
-      exit 1
-      export VERSION="$(cat /app/version.txt)"
+      export VERSION="$(cat app/version.txt)"
       if [ -z "$VERSION" ]; then
         echo "Version file is empty!"
         exit 1
