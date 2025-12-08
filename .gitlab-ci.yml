@@ -46,17 +46,17 @@ construct-version:
   artifacts:
     paths:
       - /app/version.txt
-  variables:
-    VERSION: "${MAJOR_VERSION}.${MINOR_VERSION}.${CI_PIPELINE_IID}"
   script:
     - |
       set -euvo pipefail
+      export VERSION="${MAJOR_VERSION}.${MINOR_VERSION}.${CI_PIPELINE_IID}"
+      echo "base version: ${VERSION}"
       mkdir -p /app
       # check if we're on main. if not, append branch or tag name as pre-release label
       PRE_RELEASE_LABEL=""
-      if [ "${CI_COMMIT_REF_NAME}" != "main" ]; then
-        SANITIZED_REF_NAME="$(echo "${CI_COMMIT_REF_NAME}" | tr -c '[:alnum:]' '-')"
-        PRE_RELEASE_LABEL="-${SANITIZED_REF_NAME}"
+      if [ "${CI_COMMIT_REF_SLUG}" != "main" ]; then
+        echo "non-main branch detected: ${CI_COMMIT_REF_SLUG}"
+        PRE_RELEASE_LABEL="-${CI_COMMIT_REF_SLUG}"
       fi
       FULL_VERSION="${VERSION}${PRE_RELEASE_LABEL}"
       echo $"{FULL_VERSION}" | tee /app/version.txt
@@ -78,6 +78,8 @@ deploy:
   script:
     - |
       set -euvo pipefail
+      # temporary early exit for debugging
+      exit 1
       export VERSION="$(cat /app/version.txt)"
       if [ -z "$VERSION" ]; then
         echo "Version file is empty!"
