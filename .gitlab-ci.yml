@@ -61,20 +61,18 @@ construct-version:
     paths:
       - app
 
-deploy:
-  image:
-    name: moby/buildkit:rootless
-    entrypoint: [""]
+container-build:
+  image: quay.io/buildah/stable:v1.42.1
   stage: deploy
-  dependencies:
-    - construct-version
   variables:
-    BUILDKITD_FLAGS: --oci-worker-no-process-sandbox
+    STORAGE_DRIVER: vfs
+    BUILDAH_FORMAT: docker
     DOCKER_CONTEXT_PATH: "${SOURCE_CODE_PATH}"
     DOCKERFILE_PATH: "${SOURCE_CODE_PATH}/Cloudbb.Web/Dockerfile"
   before_script:
-    - mkdir -p ~/.docker
-    - echo "{\"auths\":{\"$CI_REGISTRY\":{\"username\":\"$CI_REGISTRY_USER\",\"password\":\"$CI_REGISTRY_PASSWORD\"}}}" > ~/.docker/config.json
+    - buildah version
+    - export HOME="${CI_BUILDS_DIR}"
+    - echo "$CI_REGISTRY_PASSWORD" | buildah login -u "$CI_REGISTRY_USER" --password-stdin "$CI_REGISTRY"
   script:
     - |
       set -euvo pipefail
@@ -83,9 +81,11 @@ deploy:
         echo "Version file is empty!"
         exit 1
       fi
+      # inject version info into build context
       echo "${VERSION}" | tee "${DOCKER_CONTEXT_PATH}/CI_VERSION_INFO"
-      buildctl-daemonless.sh build \
-        --frontend dockerfile.v0 \
-        --local context="${DOCKER_CONTEXT_PATH}" \
-        --local dockerfile="${DOCKERFILE_PATH}" \
-        --output type=image,name=$CI_REGISTRY_IMAGE:$VERSION,push=true
+      # build image from Dockerfile with Buildah
+      buildah bud \
+        -f "${DOCKERFILE_PATH}" \
+        -t "${CI_REGISTRY_IMAGE}:${VERSION}" \
+        "${DOCKER_CONTEXT_PATH}"
+      buildah push "${CI_REGISTRY_IMAGE}:${VERSION}"
