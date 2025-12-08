@@ -17,7 +17,8 @@ RUN dotnet restore "./Cloudbb.Web/Cloudbb.Web.csproj"
 COPY . .
 
 # version substitution (inject current CI version info into assembly version (csproj) and runtime version info (C# file) definitions)
-RUN PROJECT_FILE_PATH='./Cloudbb.Web/Cloudbb.Web.csproj' && \
+RUN set -euo pipefail && \
+    PROJECT_FILE_PATH='./Cloudbb.Web/Cloudbb.Web.csproj' && \
     DOTNET_CI_VERSION_FILE='./Cloudbb.Web/CloudbbWeb.cs' && \
     if [ -f './CI_VERSION_INFO' ]; then export VERSION=$(cat './CI_VERSION_INFO'); else export VERSION="0.0.0"; fi && \
     export VERSION_PREFIX=$(echo "${VERSION}" | grep -Po '^[0-9]+\.[0-9]+\.[0-9]+') && \
