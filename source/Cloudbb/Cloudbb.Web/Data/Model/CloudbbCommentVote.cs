@@ -4,12 +4,24 @@ using Wkg.EntityFrameworkCore.Configuration;
 
 namespace Cloudbb.Web.Data.Model;
 
+/// <summary>
+/// Represents a user vote on a comment (upvote or downvote).
+/// Used for indicating comment quality and relevance to the discussion.
+/// Each user can have at most one vote per comment.
+/// </summary>
 public sealed class CloudbbCommentVote() : CloudbbVote, IDiscoverableModelConfiguration<CloudbbCommentVote>
 {
+    /// <summary>
+    /// Foreign key referencing the comment being voted on.
+    /// </summary>
     public Guid CommentId { get; set; }
 
+    /// <summary>
+    /// Navigation property to the comment being voted on.
+    /// </summary>
     public CloudbbComment Comment { get; set; } = null!;
 
+    /// <inheritdoc />
     public static void Configure(EntityTypeBuilder<CloudbbCommentVote> self)
     {
         ArgumentNullException.ThrowIfNull(self);

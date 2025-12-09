@@ -7,8 +7,20 @@ using Wkg.EntityFrameworkCore.Configuration;
 
 namespace Cloudbb.Web.Data.Model;
 
+/// <summary>
+/// Domain entity representing a forum user in the Cloudbb system.
+/// Acts as a bridge between ASP.NET Core Identity and the forum's domain model,
+/// extending user data with forum-specific properties and relationships.
+/// </summary>
 public sealed class CloudbbUser() : CloudbbEntity, IDiscoverableModelConfiguration<CloudbbUser>
 {
+    /// <summary>
+    /// Initializes a new CloudbbUser from an existing ASP.NET Core Identity user.
+    /// Validates that the identity user has required email and username properties.
+    /// </summary>
+    /// <param name="identityUser">The Identity user to create the domain user from.</param>
+    /// <exception cref="ArgumentNullException">Thrown when identityUser is null.</exception>
+    /// <exception cref="ArgumentException">Thrown when identity user lacks email or username, or email is invalid.</exception>
     [SetsRequiredMembers]
     public CloudbbUser(IdentityUser identityUser) : this()
     {
@@ -26,18 +38,43 @@ public sealed class CloudbbUser() : CloudbbEntity, IDiscoverableModelConfigurati
         UserName = userName;
     }
 
+    /// <summary>
+    /// The user's email address, synchronized with the Identity user's email.
+    /// Required for forum notifications and account verification.
+    /// </summary>
     public required string Email { get; set; }
 
+    /// <summary>
+    /// The user's display name in the forum, synchronized with the Identity username.
+    /// Used for post attribution and user identification in the forum interface.
+    /// </summary>
     public required string UserName { get; set; }
 
+    /// <summary>
+    /// Foreign key linking to the ASP.NET Core Identity user.
+    /// Maintains the relationship between forum data and authentication data.
+    /// </summary>
     public required string IdentityUserId { get; set; }
 
+    /// <summary>
+    /// Navigation property to the associated ASP.NET Core Identity user.
+    /// Provides access to authentication and authorization data.
+    /// </summary>
     public IdentityUser IdentityUser { get; set; } = null!;
 
+    /// <summary>
+    /// Collection of forum posts authored by this user.
+    /// Supports lazy loading and tracks user's contribution history.
+    /// </summary>
     public ICollection<CloudbbPost> Posts { get; set; } = null!;
 
+    /// <summary>
+    /// Collection of comments authored by this user across all forum posts.
+    /// Enables tracking of user engagement and comment history.
+    /// </summary>
     public ICollection<CloudbbComment> Comments { get; set; } = null!;
 
+    /// <inheritdoc />
     public static void Configure(EntityTypeBuilder<CloudbbUser> self)
     {
         ArgumentNullException.ThrowIfNull(self);

@@ -4,12 +4,24 @@ using Wkg.EntityFrameworkCore.Configuration;
 
 namespace Cloudbb.Web.Data.Model;
 
+/// <summary>
+/// Represents a user vote on a forum post (upvote or downvote).
+/// Used for calculating post scores and enabling community-driven content ranking.
+/// Each user can have at most one vote per post.
+/// </summary>
 public sealed class CloudbbPostVote() : CloudbbVote, IDiscoverableModelConfiguration<CloudbbPostVote>
 {
+    /// <summary>
+    /// Foreign key referencing the post being voted on.
+    /// </summary>
     public Guid PostId { get; set; }
 
+    /// <summary>
+    /// Navigation property to the post being voted on.
+    /// </summary>
     public CloudbbPost Post { get; set; } = null!;
 
+    /// <inheritdoc />
     public static void Configure(EntityTypeBuilder<CloudbbPostVote> self)
     {
         ArgumentNullException.ThrowIfNull(self);
