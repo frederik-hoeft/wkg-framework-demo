@@ -54,11 +54,10 @@ public sealed class AuthController(
         await dbContext.SaveChangesAsync(ct);
 
         IList<string> roles = await userManager.GetRolesAsync(identityUser);
+        IJwtToken token = await jwtService.GenerateTokenAsync(user, roles, ct);
+        string serializedToken = await token.SerializeAsync(ct);
 
-        string token = await jwtService.GenerateTokenAsync(user, roles, ct);
-        double expirationMinutes = double.Parse(configuration["Auth:Jwt:ExpirationMinutes"]!);
-
-        return transaction.Commit(Ok(AuthResponse.Success(token, DateTime.UtcNow.AddMinutes(expirationMinutes))));
+        return transaction.Commit(Ok(AuthResponse.Success(serializedToken, token.Token.ValidTo)));
     }, cancellationToken);
 
     [HttpPost("login")]
@@ -94,11 +93,10 @@ public sealed class AuthController(
         }
 
         IList<string> roles = await userManager.GetRolesAsync(identityUser);
+        IJwtToken token = await jwtService.GenerateTokenAsync(user, roles, ct);
+        string serializedToken = await token.SerializeAsync(ct);
 
-        string token = await jwtService.GenerateTokenAsync(user, roles, ct);
-        double expirationMinutes = double.Parse(configuration["Auth:Jwt:ExpirationMinutes"]!);
-
-        return transaction.Commit(Ok(AuthResponse.Success(token, DateTime.UtcNow.AddMinutes(expirationMinutes))));
+        return transaction.Commit(Ok(AuthResponse.Success(serializedToken, token.Token.ValidTo)));
     }, cancellationToken);
 
     [Authorize]
