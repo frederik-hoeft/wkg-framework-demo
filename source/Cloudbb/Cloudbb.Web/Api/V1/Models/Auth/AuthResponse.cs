@@ -1,6 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 
-namespace Cloudbb.Web.Api.Models.Auth;
+namespace Cloudbb.Web.Api.V1.Models.Auth;
 
 public sealed record AuthResponse(string? Token, string? Message, DateTime? ExpiresAt)
 {

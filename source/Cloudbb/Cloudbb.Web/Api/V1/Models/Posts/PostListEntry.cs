@@ -1,4 +1,4 @@
-﻿namespace Cloudbb.Web.Api.Models.Posts;
+﻿namespace Cloudbb.Web.Api.V1.Models.Posts;
 
 public record PostListEntry
 (

@@ -1,7 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using Wkg.AspNetCore.Validation;
 
-namespace Cloudbb.Web.Api.Models.Auth;
+namespace Cloudbb.Web.Api.V1.Models.Auth;
 
 public sealed record RegisterRequest
 {

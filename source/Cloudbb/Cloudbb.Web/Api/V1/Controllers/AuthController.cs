@@ -1,4 +1,5 @@
-﻿using Cloudbb.Web.Api.Models.Auth;
+﻿using Asp.Versioning;
+using Cloudbb.Web.Api.V1.Models.Auth;
 using Cloudbb.Web.Data;
 using Cloudbb.Web.Data.Model;
 using Cloudbb.Web.Services.Auth;
@@ -10,10 +11,11 @@ using Wkg.AspNetCore.Abstractions.Controllers;
 using Wkg.AspNetCore.Transactions;
 using SignInResult = Microsoft.AspNetCore.Identity.SignInResult;
 
-namespace Cloudbb.Web.Api.Controllers;
+namespace Cloudbb.Web.Api.V1.Controllers;
 
 [ApiController]
-[Route("api/[controller]")]
+[ApiVersion("1.0")]
+[Route("api/v{version:apiVersion}/auth")]
 public sealed class AuthController(
     UserManager<IdentityUser> userManager,
     SignInManager<IdentityUser> signInManager,

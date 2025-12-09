@@ -1,9 +1,12 @@
+using Asp.Versioning;
+using Asp.Versioning.ApiExplorer;
 using Cloudbb.Web.Data;
 using Cloudbb.Web.Services.Auth;
 using Cloudbb.Web.Services.Auth.Default;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
 using System.Data;
 using System.Text;
@@ -78,8 +81,20 @@ builder.Services.AddScoped<IUserClaimIndex, UserClaimIndex>();
 builder.Services.AddSingleton<ITimingRandomizationService, CsprngTimingRandomizationService>();
 
 builder.Services.AddControllers();
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
-builder.Services.AddOpenApi();
+builder.Services.AddApiVersioning(options =>
+{
+    options.AssumeDefaultVersionWhenUnspecified = true;
+    options.DefaultApiVersion = new ApiVersion(1, 0);
+    options.ReportApiVersions = true;
+}).AddApiExplorer(options =>
+{
+    options.GroupNameFormat = "'v'VVV";
+    options.SubstituteApiVersionInUrl = true;
+});
+// Add support for EndpointsApiExplorer
+builder.Services.AddEndpointsApiExplorer();
+
+builder.Services.AddOpenApi("v1");
 
 WebApplication app = builder.Build();
 
@@ -87,6 +102,12 @@ WebApplication app = builder.Build();
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
+    app.UseSwaggerUI(swagger =>
+    {
+        swagger.SwaggerEndpoint("v1.json", "Cloudbb API V1");
+        swagger.RoutePrefix = "openapi";
+        swagger.EnableDeepLinking();
+    });
     app.UseDeveloperExceptionPage();
 }
 

@@ -1,4 +1,5 @@
-using Cloudbb.Web.Api.Models.Posts;
+using Asp.Versioning;
+using Cloudbb.Web.Api.V1.Models.Posts;
 using Cloudbb.Web.Data;
 using Cloudbb.Web.Data.Model;
 using Cloudbb.Web.Services.Auth;
@@ -8,11 +9,12 @@ using Microsoft.EntityFrameworkCore;
 using Wkg.AspNetCore.Abstractions.Controllers;
 using Wkg.AspNetCore.Transactions;
 
-namespace Cloudbb.Web.Api.Controllers;
+namespace Cloudbb.Web.Api.V1.Controllers;
 
 [Authorize]
 [ApiController]
-[Route("/api/posts")]
+[ApiVersion("1.0")]
+[Route("api/v{version:apiVersion}/posts")]
 public sealed class PostsController
 (
     ITransactionServiceHandle transactionService,

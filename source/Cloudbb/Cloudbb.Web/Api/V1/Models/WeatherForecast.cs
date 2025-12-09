@@ -1,4 +1,4 @@
-namespace Cloudbb.Web.Api.Models;
+namespace Cloudbb.Web.Api.V1.Models;
 
 public class WeatherForecast
 {
