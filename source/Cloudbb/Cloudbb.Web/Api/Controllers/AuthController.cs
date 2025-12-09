@@ -55,7 +55,7 @@ public sealed class AuthController(
 
         IList<string> roles = await userManager.GetRolesAsync(identityUser);
 
-        string token = await jwtService.GenerateTokenAsync(user, roles);
+        string token = await jwtService.GenerateTokenAsync(user, roles, ct);
         double expirationMinutes = double.Parse(configuration["Auth:Jwt:ExpirationMinutes"]!);
 
         return transaction.Commit(Ok(AuthResponse.Success(token, DateTime.UtcNow.AddMinutes(expirationMinutes))));
@@ -95,7 +95,7 @@ public sealed class AuthController(
 
         IList<string> roles = await userManager.GetRolesAsync(identityUser);
 
-        string token = await jwtService.GenerateTokenAsync(user, roles);
+        string token = await jwtService.GenerateTokenAsync(user, roles, ct);
         double expirationMinutes = double.Parse(configuration["Auth:Jwt:ExpirationMinutes"]!);
 
         return transaction.Commit(Ok(AuthResponse.Success(token, DateTime.UtcNow.AddMinutes(expirationMinutes))));
