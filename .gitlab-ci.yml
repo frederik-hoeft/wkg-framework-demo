@@ -49,10 +49,10 @@ construct-version:
       export VERSION="${MAJOR_VERSION}.${MINOR_VERSION}.${CI_PIPELINE_IID}"
       echo "base version: ${VERSION}"
       mkdir -p app
-      # check if we're on main. if not, append branch or tag name as pre-release label
+      # check if we're on main or master. if not, append branch or tag name as pre-release label
       PRE_RELEASE_LABEL=""
-      if [ "${CI_COMMIT_REF_SLUG}" != "main" ]; then
-        echo "non-main branch detected: ${CI_COMMIT_REF_SLUG}"
+      if [ "${CI_COMMIT_REF_SLUG}" != "main" ] && [ "${CI_COMMIT_REF_SLUG}" != "master" ]; then
+        echo "non-main/master branch detected: ${CI_COMMIT_REF_SLUG}"
         PRE_RELEASE_LABEL="-${CI_COMMIT_REF_SLUG}"
       fi
       FULL_VERSION="${VERSION}${PRE_RELEASE_LABEL}"
@@ -86,8 +86,8 @@ deploy-container-image:
       echo "{\"auths\":{\"$CI_REGISTRY\":{\"auth\":\"$(printf "%s:%s" "${CI_REGISTRY_USER}" "${CI_REGISTRY_PASSWORD}" | base64 | tr -d '\n')\"}}}" > /kaniko/.docker/config.json
     - |
       set -euvo pipefail
-      # only set latest tag for main branch builds
-      if [ "$CI_COMMIT_REF_SLUG" != "main" ]; then
+      # only set latest tag for main/master branch builds
+      if [ "$CI_COMMIT_REF_SLUG" != "main" ] && [ "$CI_COMMIT_REF_SLUG" != "master" ]; then
         /kaniko/executor --context "${DOCKER_CONTEXT_PATH}" --dockerfile "${DOCKERFILE_PATH}" --destination "${CI_REGISTRY_IMAGE}:${VERSION}"
       else
         /kaniko/executor --context "${DOCKER_CONTEXT_PATH}" --dockerfile "${DOCKERFILE_PATH}" --destination "${CI_REGISTRY_IMAGE}:${VERSION}" --destination "${CI_REGISTRY_IMAGE}:latest"
