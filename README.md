@@ -1,78 +1,86 @@
-## Introduction
+# Cloudbb .NET Service
 
-This is a simple pipeline example for a .NET Core application, showing just
-how easy it is to get up and running with .NET development using GitLab.
+Cloudbb is an ASP.NET Core 10.0 Web API using PostgreSQL, ASP.NET Core Identity, and JWT auth. The project includes API versioning, grouped Swagger docs, EF Core migrations with auto-apply on startup, and strict code conventions for clarity and maintainability.
 
-# Reference links
+## Overview
+- **Core app**: `source/Cloudbb/Cloudbb.Web` (`net10.0`, nullable enabled).
+- **Auth**: ASP.NET Core Identity + JWT (HMAC-SHA256 symmetric signing), global authorization.
+- **Data**: PostgreSQL via EF Core with explicit entity naming/mapping and model discovery.
+- **API Versioning**: `Asp.Versioning` with grouped Swagger in Development.
+- **Transactions**: `ReadCommitted` via `Wkg.AspNetCore.Transactions`.
 
-- [GitLab CI Documentation](https://docs.gitlab.com/ee/ci/)
-- [.NET Hello World tutorial](https://dotnet.microsoft.com/learn/dotnet/hello-world-tutorial/)
+## Project Structure
+- `source/Cloudbb/Cloudbb.Web`
+    - `Api/V1/Controllers/`: versioned controllers split into `.api.cs` (routing/docs) and `.cs` (logic)
+    - `Configuration/Swagger/`: Swagger configuration and filters
+    - `Configuration/Versions.cs`: API version constants
+    - `Data/`: DbContext, model loader, entities, seeds, migrations
+    - `Services/Auth/`: JWT and auth-related services
+    - `Extensions/`: helpers (e.g., path utilities)
 
-If you're new to .NET you'll want to check out the tutorial, but if you're
-already a seasoned developer considering building your own .NET app with GitLab,
-this should all look very familiar.
+## Conventions
+See `code-style.md`. Highlights:
+- No `var`; use explicit types. Async methods end with `Async`.
+- File-scoped namespaces; Allman bracing; explicit visibility; sealed internal types.
+- Target-typed `new` only when the left-hand type is explicit.
 
-## What's contained in this project
+## Configuration
+Set these in `appsettings.json` or environment variables:
+- `DatabaseConnection`: PostgreSQL connection string
+- `Auth:Jwt:Issuer`, `Auth:Jwt:Audience`, `Auth:Jwt:Key`, `Auth:Jwt:TimeToLive`
 
-The root of the repository contains the out of the `dotnet new console` command,
-which generates a new console application that just prints out "Hello, World."
-It's a simple example, but great for demonstrating how easy GitLab CI is to
-use with .NET. Check out the `Program.cs` and `dotnetcore.csproj` files to
-see how these work.
+Swagger XML comments are loaded from `Cloudbb.Web.xml` and enabled in Development.
 
-In addition to the .NET Core content, there is a ready-to-go `.gitignore` file
-sourced from the the .NET Core [.gitignore](https://github.com/dotnet/core/blob/master/.gitignore). This
-will help keep your repository clean of build files and other configuration.
+## Authentication
+JWT is configured in `Program.cs` (`JwtBearerDefaults`) with zero clock skew. Services:
+- `IJwtAlgorithmProvider` → `JwtHmacSha256AlgorithmProvider`
+- `IJwtSigningKeyProvider` → `JwtSymmetricSigningKeyProvider`
+- `IJwtService` → `JwtService`
 
-Finally, the `.gitlab-ci.yml` contains the configuration needed for GitLab
-to build your code. Let's take a look, section by section.
+Tokens include claims for `NameIdentifier`, `Name`, `Email`, `Role`, `Jti`, `Iat`. TTL from `Auth:Jwt:TimeToLive`.
 
-First, we note that we want to use the official Microsoft .NET SDK image
-to build our project.
+## Data & Migrations
+- `ApplicationDbContext` extends `IdentityDbContext<IdentityUser>` and enforces explicit entity/property mapping policies.
+- Entities live in `Data/Model/` and typically extend `CloudbbEntity` (connection entities can implement `ICloudbbConnectionEntity`).
+- Migrations live in `Data/Migrations` and auto-apply at startup via `Database.MigrateAsync()`.
+- Seeded roles: `admin`, `user` via `Data/Seeds/IdentityRoleDataSeed.cs`.
 
-```
-image: microsoft/dotnet:latest
-```
+## API Versioning & Swagger
+- Default API version is v1.0 with URL substitution (`api/v{version}/...`).
+- Controllers should use `[ApiVersion("1.0")]` and routes like `api/v1/<resource>`.
+- Development-only Swagger UI exposes per-version endpoints and Bearer auth.
 
-We're defining two stages here: `build`, and `test`. As your project grows
-in complexity you can add more of these.
+## Build & Run
+Use the following commands from the repo root (Windows bash):
 
-```
-stages:
-    - build
-    - test
-```
+```bash
+# Build solution
+dotnet build source/Cloudbb/Cloudbb.slnx
 
-Next, we define our build job which simply runs the `dotnet build` command and
-identifies the `bin` folder as the output directory. Anything in the `bin` folder
-will be automatically handed off to future stages, and is also downloadable through
-the web UI.
-
-```
-build:
-    stage: build
-    script:
-        - "dotnet build"
-    artifacts:
-      paths:
-        - bin/
-```
-
-Similar to the build step, we get our test output simply by running `dotnet test`.
-
-```
-test:
-    stage: test
-    script: 
-        - "dotnet test"
+# Run the Web API
+dotnet run --project source/Cloudbb/Cloudbb.Web
 ```
 
-This should be enough to get you started. There are many, many powerful options 
-for your `.gitlab-ci.yml`. You can read about them in our documentation 
-[here](https://docs.gitlab.com/ee/ci/yaml/).
+Database migrations:
 
-## Developing with Gitpod
+```bash
+# From source/Cloudbb/Cloudbb.Web/
+dotnet ef migrations add MigrationName
+dotnet ef database update
 
-This template repository also has a fully-automated dev setup for [Gitpod](https://docs.gitlab.com/ee/integration/gitpod.html).
+# Preferred helper (validates PascalCase name, writes to Data/Migrations)
+bash source/Cloudbb/Cloudbb.Web/add-migration.sh AddMyEntity
+```
 
-The `.gitpod.yml` ensures that, when you open this repository in Gitpod, you'll get a cloud workspace with .NET Core pre-installed, and your project will automatically be built and start running.
+## Adding Features
+- **Controllers**: place under `Api/V1/Controllers/`, split into `.api.cs` and `.cs`, secure with `[Authorize]` where required.
+- **Models**: add to `Data/Model/` and ensure they meet mapping/inheritance policies; include in `ApplicationModelLoader` discovery as needed.
+- **Services**: add under `Services/` and register in `Program.cs` with explicit lifetimes (`AddSingleton`/`AddScoped`).
+
+## Development Notes
+- API versioning group format is `'v'VVV`.
+- Swagger references are non-nullable and include validation filters.
+- JWT issuer/audience/key and DB connection are read from configuration.
+
+## License
+This repository does not declare a license. If you intend to distribute or open-source, please add a license file.
