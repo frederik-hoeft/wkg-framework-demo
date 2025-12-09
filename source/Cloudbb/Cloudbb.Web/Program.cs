@@ -1,5 +1,6 @@
 using Asp.Versioning;
 using Asp.Versioning.ApiExplorer;
+using Cloudbb.Web.Configuration.Swagger;
 using Cloudbb.Web.Data;
 using Cloudbb.Web.Services.Auth;
 using Cloudbb.Web.Services.Auth.Default;
@@ -8,6 +9,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
+using Swashbuckle.AspNetCore.SwaggerUI;
 using System.Data;
 using System.Text;
 using Wkg.AspNetCore.Transactions.Configuration;
@@ -91,22 +93,23 @@ builder.Services.AddApiVersioning(options =>
     options.GroupNameFormat = "'v'VVV";
     options.SubstituteApiVersionInUrl = true;
 });
-// Add support for EndpointsApiExplorer
-builder.Services.AddEndpointsApiExplorer();
-
-builder.Services.AddOpenApi("v1");
+builder.Services.AddSwaggerGen();
+builder.Services.ConfigureOptions<ConfigureSwaggerOptions>();
 
 WebApplication app = builder.Build();
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
-    app.MapOpenApi();
+    IApiVersionDescriptionProvider versionDescriptionProvider = app.Services.GetRequiredService<IApiVersionDescriptionProvider>();
+    app.UseSwagger();
     app.UseSwaggerUI(swagger =>
     {
-        swagger.SwaggerEndpoint("v1.json", "Cloudbb API V1");
-        swagger.RoutePrefix = "openapi";
         swagger.EnableDeepLinking();
+        foreach (ApiVersionDescription description in versionDescriptionProvider.ApiVersionDescriptions)
+        {
+            swagger.SwaggerEndpoint($"/swagger/{description.GroupName}/swagger.json", description.GroupName.ToUpperInvariant());
+        }
     });
     app.UseDeveloperExceptionPage();
 }

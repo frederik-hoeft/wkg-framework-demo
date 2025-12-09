@@ -1,9 +1,7 @@
-using Asp.Versioning;
 using Cloudbb.Web.Api.V1.Models.Posts;
 using Cloudbb.Web.Data;
 using Cloudbb.Web.Data.Model;
 using Cloudbb.Web.Services.Auth;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Wkg.AspNetCore.Abstractions.Controllers;
@@ -11,19 +9,16 @@ using Wkg.AspNetCore.Transactions;
 
 namespace Cloudbb.Web.Api.V1.Controllers;
 
-[Authorize]
-[ApiController]
-[ApiVersion("1.0")]
-[Route("api/v{version:apiVersion}/posts")]
-public sealed class PostsController
+/// <summary>
+/// Provides endpoints for managing posts.
+/// </summary>
+public sealed partial class PostsController
 (
     ITransactionServiceHandle transactionService,
     IUserClaimIndex userClaims
 ) : DatabaseController<ApplicationDbContext>(transactionService)
 {
-    [HttpGet]
-    // TODO: paging + search options
-    public async Task<IActionResult> GetPostsAsync(string? tz = null, TimeSpan? tzoffset = null, CancellationToken cancellationToken = default) => await Transaction.Scoped.RunReadOnlyAsync(async (dbContext, ct) =>
+    public partial Task<IActionResult> GetPostsAsync(string? tz, TimeSpan? tzoffset, CancellationToken cancellationToken) => Transaction.Scoped.RunReadOnlyAsync<IActionResult>(async (dbContext, ct) =>
     {
         TimeZoneInfo tzinfo = ParseUserLocalTime(tz, tzoffset);
         List<PostListEntry> posts = await dbContext.Set<CloudbbPost>()
@@ -52,11 +47,10 @@ public sealed class PostsController
                 postInfo.Post.Revisions.Count > 1
             ))
             .ToListAsync(ct);
-        return Ok(posts);
+        return Ok(new PostListResponse(posts));
     }, cancellationToken);
 
-    [HttpPost("create")]
-    public async Task<IActionResult> CreatePostAsync([FromBody] PostCreationRequest request, CancellationToken cancellationToken) => await Transaction.Scoped.RunAsync(async (dbContext, transaction, ct) =>
+    public partial Task<IActionResult> CreatePostAsync(PostCreationRequest request, CancellationToken cancellationToken) => Transaction.Scoped.RunAsync(async (dbContext, transaction, ct) =>
     {
         ArgumentNullException.ThrowIfNull(request);
         if (!ModelState.IsValid)
