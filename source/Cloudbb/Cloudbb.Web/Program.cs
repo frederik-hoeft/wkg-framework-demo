@@ -70,9 +70,9 @@ builder.Services.AddTransactionManagement<ApplicationDbContext>(transactionOptio
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // auth services
-//builder.Services.AddSingleton<IJwtECDsaSigningKeyImportService, JwtECDsaPemFileSigningKeyImportService>();
-builder.Services.AddSingleton<IJwtAlgorithmProvider, JwtHmacSha256AlgorithmProvider>();
-builder.Services.AddSingleton<IJwtSigningKeyProvider, JwtSymmetricSigningKeyProvider>();
+builder.Services.AddSingleton<IJwtAlgorithmProvider, JwtEcdsaSha256AlgorithmProvider>();
+builder.Services.AddSingleton<IJwtECDsaSigningKeyImportService, JwtECDsaPemFileSigningKeyImportService>();
+builder.Services.AddSingleton<IJwtSigningKeyProvider, JwtECDsaSigningKeyProvider>();
 builder.Services.AddScoped<IJwtService, JwtService>();
 builder.Services.AddScoped<IUserClaimIndex, UserClaimIndex>();
 builder.Services.AddSingleton<ITimingRandomizationService, CsprngTimingRandomizationService>();
