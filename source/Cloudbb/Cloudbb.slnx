@@ -3,5 +3,6 @@
     <File Path=".editorconfig" />
     <File Path="Directory.Build.props" />
   </Folder>
+  <Project Path="Cloudbb.Web.Tests/Cloudbb.Web.Tests.csproj" Id="18c232c3-9828-4854-9416-08bccbacd6cd" />
   <Project Path="Cloudbb.Web/Cloudbb.Web.csproj" />
 </Solution>

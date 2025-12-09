@@ -7,7 +7,7 @@ internal sealed class UserClaimIndex(IHttpContextAccessor httpContextAccessor) :
 {
     private Dictionary<string, string>? _claimIndex;
 
-    public bool IsAuthenticated => httpContextAccessor.HttpContext?.User?.Identity?.IsAuthenticated ?? false;
+    public bool IsAuthenticated => httpContextAccessor.HttpContext?.User.Identity?.IsAuthenticated ?? false;
 
     public Guid GetUserId()
     {
@@ -46,7 +46,7 @@ internal sealed class UserClaimIndex(IHttpContextAccessor httpContextAccessor) :
             goto FAILURE;
         }
         _claimIndex = [];
-        IEnumerable<Claim>? claims = httpContextAccessor.HttpContext?.User?.Claims;
+        IEnumerable<Claim>? claims = httpContextAccessor.HttpContext?.User.Claims;
         if (claims is null)
         {
             goto FAILURE;

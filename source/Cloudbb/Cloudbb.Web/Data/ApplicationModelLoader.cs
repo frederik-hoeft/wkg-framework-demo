@@ -1,4 +1,6 @@
-﻿using Wkg.EntityFrameworkCore.Discovery.SourceGeneration;
+﻿using Microsoft.EntityFrameworkCore;
+using Wkg.EntityFrameworkCore.Configuration;
+using Wkg.EntityFrameworkCore.Discovery.SourceGeneration;
 
 namespace Cloudbb.Web.Data;
 
