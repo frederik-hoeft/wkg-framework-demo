@@ -8,29 +8,28 @@ ASP.NET Core 10.0 Web API with Identity authentication, JWT tokens, PostgreSQL d
 
 ### Core Components
 
-- **`source/Cloudbb/Cloudbb.Web/`** - Main web API project
-- **`Data/ApplicationDbContext.cs`** - EF Core context with Identity integration, uses PostgreSQL with custom schema (`identity`)
-- **`Data/Model/`** - Domain entities (CloudbbUser, CloudbbPost, CloudbbComment with voting system)
-- **`Services/Auth/Default/`** - JWT authentication services with interface-driven design
-- **`Controllers/`** - API endpoints (Auth controller for Identity operations)
-- **`Api/Models/`** - DTOs and request/response models
+- **`source/Cloudbb/Cloudbb.Web/`** - Main web API project with versioned controllers (`Api/V1/Controllers/`)
+- **`Data/ApplicationDbContext.cs`** - EF Core context with Identity integration, enforces explicit entity/property mapping policies
+- **`Data/Model/`** - Domain entities (CloudbbUser extends Identity, CloudbbPost/Comment with voting system)
+- **`Services/Auth/`** - Interface-driven JWT authentication services with ECDSA signing
+- **`Configuration/`** - API versioning, Swagger configuration with grouped endpoints
 
 ### Technology Stack
 
 - **.NET 10.0** with nullable reference types enabled globally
-- **PostgreSQL** via Npgsql.EntityFrameworkCore.PostgreSQL
-- **ASP.NET Core Identity** with JWT Bearer authentication
-- **Entity Framework Core** with migrations
-- **MSTest v4** for testing with Moq 4.20.72
-- **GitLab CI/CD** with Docker deployment using Kaniko
+- **PostgreSQL** via Npgsql.EntityFrameworkCore.PostgreSQL with source-generated model discovery
+- **ASP.NET Core Identity** with JWT Bearer authentication (zero clock skew)
+- **Entity Framework Core** with auto-apply migrations on startup
+- **MSTest.Sdk/4.0.2** for testing with Moq 4.20.72
+- **API Versioning** with grouped Swagger docs in Development
 
 ## Critical Coding Standards
 
-Always source `/code-style.md` before generating code to ensure compliance with project conventions. Key standards include:
+**MANDATORY**: Always read `/code-style.md` before generating code. Key non-negotiable rules:
 
 ### Naming & Visibility
 
-- **Never use `var`** - always explicit types (prevents async bugs)
+- **Never use `var`** - always explicit types for clarity
 - **Primary constructor parameters** in `camelCase`, private fields `_camelCase`
 - **All types sealed** unless inheritance required
 - **Visibility always explicit** (`private`, `public`, etc.) even when default
@@ -38,29 +37,23 @@ Always source `/code-style.md` before generating code to ensure compliance with 
 ### Code Structure
 
 - **File-scoped namespaces** (`namespace Cloudbb.Web;`)
-- **Allman bracing** with exceptions for properties/initializers
+- **Allman bracing** with exceptions for auto-properties/initializers
 - **Async methods** suffixed with `Async`
 - **Target-typed new** when type explicit on left side: `FileStream stream = new(...);`
-- **Internal services** exposed to tests via `_friends.cs` with `InternalsVisibleTo("Cloudbb.Web.Tests")`
 
-### Authentication Patterns
+### Error Prevention
 
-```csharp
-// JWT service injection pattern
-builder.Services.AddScoped<IJwtService, JwtService>();
-
-// Controller auth pattern
-[Authorize]
-[HttpGet("profile")]
-public async Task<IActionResult> GetProfile()
-```
+- **No magic strings/numbers** - use `nameof()` and constants
+- **Named parameters** for clarity: `CompressionMode.Compress, leaveOpen: true`
+- **Explicit null handling** - nullable reference types, avoid `!` operator unless absolutely necessary
 
 ## Development Workflows
 
 ### Database Operations
 
 ```bash
-# Use custom migration script from Cloudbb.Web directory
+# ALWAYS use custom migration script from Cloudbb.Web directory
+cd source/Cloudbb/Cloudbb.Web
 ./add-migration.sh MigrationName  # Validates PascalCase, outputs to Data/Migrations
 dotnet ef database update
 ```
@@ -68,17 +61,36 @@ dotnet ef database update
 ### Build & Test
 
 ```bash
-# GitLab CI uses these exact commands
-dotnet restore source/Cloudbb --packages .nuget
-dotnet build source/Cloudbb --no-restore
-dotnet test source/Cloudbb --no-restore
+# Standard commands from solution root
+dotnet build source/Cloudbb/Cloudbb.slnx
+dotnet run --project source/Cloudbb/Cloudbb.Web
+dotnet test source/Cloudbb/Cloudbb.Web.Tests
 ```
 
-### Project Structure Commands
+## Service Patterns
 
-- Build from solution root: `dotnet build source/Cloudbb/Cloudbb.slnx`
-- Run project: `dotnet run --project source/Cloudbb/Cloudbb.Web`
-- Add migrations: `cd source/Cloudbb/Cloudbb.Web && ./add-migration.sh MigrationName`
+### Interface-Driven Design
+
+All business services implement interfaces for testability:
+
+```csharp
+// Service registration pattern in Program.cs
+builder.Services.AddSingleton<IJwtAlgorithmProvider, JwtEcdsaSha256AlgorithmProvider>();
+builder.Services.AddScoped<IJwtService, JwtService>();
+
+// Interface definition pattern
+public interface IJwtService
+{
+    ValueTask<IJwtToken> GenerateTokenAsync(CloudbbUser user, IEnumerable<string> roles, CancellationToken cancellationToken = default);
+}
+```
+
+### Authentication Architecture
+
+- **JWT with ECDSA signing** (not HMAC) for production security
+- **Zero clock skew** validation: `ClockSkew = TimeSpan.Zero`
+- **Claims-based** with `NameIdentifier`, `Name`, `Email`, `Role`, `Jti`, `Iat`
+- **Global authorization** with `[Authorize]` on controllers
 
 ## Testing Patterns
 
@@ -86,7 +98,7 @@ dotnet test source/Cloudbb --no-restore
 
 **CRITICAL**: Before writing tests, AI agents must first fetch https://learn.microsoft.com/en-us/dotnet/core/testing/unit-testing-mstest-migration-v3-v4 to avoid using deprecated APIs.
 
-Follow existing test patterns in `Cloudbb.Web.Tests/Services/Auth/Default/`:
+Follow existing test patterns:
 
 ```csharp
 [TestClass]
@@ -118,58 +130,46 @@ public sealed class ServiceNameTests
 }
 ```
 
-### Test Configuration
+### Internal Access Pattern
 
-- **Test project uses MSTest.Sdk/4.0.2** - modern MSTest with simplified project structure
-- **Moq 4.20.72** for mocking with `Mock<T>.Setup()` patterns
-- **Internal access** via `InternalsVisibleTo` allows testing internal services directly
-- **Isolation testing** - each service tested in isolation with all dependencies mocked
+- **`_friends.cs`**: `[assembly: InternalsVisibleTo("Cloudbb.Web.Tests")]`
+- **Test internal services directly** without exposing them publicly
+- **Mock all dependencies** for isolation testing
 
-## Configuration Patterns
+## EF Core Patterns
 
-### Service Registration
+### Explicit Mapping Requirements
 
-- **Interface-driven design**: All services implement interfaces for testability
-- **Scoped lifetimes** for business logic (`IJwtService`, `IDatabaseSeedService`)
-- **DbContext** with typed options: `AddDbContext<ApplicationDbContext>`
-- **Identity configuration** with explicit password/lockout policies
+```csharp
+// ApplicationDbContext enforces explicit policies
+builder.LoadModels(modelLoader, modelOptions => modelOptions
+    .ConfigurePolicies(policies => policies
+        .AddPolicy<EntityNaming>(naming => naming.RequireExplicit())
+        .AddPolicy<PropertyMapping>(mapping => mapping.RequireExplicit())
+        .AddPolicy<EntityInheritanceValidation>(entity => entity
+            .MustExtend<CloudbbEntity>()
+            .UnlessExtends<ICloudbbConnectionEntity>())));
+```
 
-### CI/CD Integration
+### Domain Model Patterns
 
-- **Version injection**: GitLab CI injects version into both `csproj` and `CloudbbWeb.cs` runtime constants
-- **Multi-stage builds**: Build → Test → Deploy with Docker containerization
-- **Alpine-based images**: Uses `mcr.microsoft.com/dotnet/sdk:10.0-alpine` for smaller footprint
+- **CloudbbUser extends CloudbbEntity**: Bridge between Identity and domain
+- **Vote entities**: CloudbbPostVote, CloudbbCommentVote for user interactions
+- **Connection entities**: Implement `ICloudbbConnectionEntity` for many-to-many relationships
 
 ## Key Files for Context
 
-### Essential Architecture Files
+### Essential Reading
+- **`Program.cs`** - Service registration, JWT config, middleware pipeline
+- **`code-style.md`** - Complete coding standards (MUST READ before coding)
+- **`Data/ApplicationDbContext.cs`** - EF Core policies and model loading
+- **`add-migration.sh`** - Custom migration script with PascalCase validation
+- **`_friends.cs`** - Test access configuration
 
-- **`Program.cs`** - Service registration, middleware pipeline, authentication setup
-- **`Data/ApplicationDbContext.cs`** - Database schema with Identity integration
-- **`_friends.cs`** - Assembly-level InternalsVisibleTo configuration
-- **`Services/Auth/Default/`** - JWT authentication implementation with provider pattern
-- **`Data/Model/CloudbbUser.cs`** - Domain entity extending Identity with custom properties
+### Configuration Structure
+- **API versioning**: Default v1.0 with URL substitution (`api/v{version}/`)
+- **Swagger**: Development-only with Bearer auth, grouped by version
+- **Connection strings**: `DatabaseConnection` for PostgreSQL (`cloudbb`/`cloudbb_dev`)
+- **JWT settings**: `Auth:Jwt:*` configuration keys
 
-### Configuration Files
-
-- **`appsettings.json`** - Production PostgreSQL connection (`cloudbb` database)
-- **`appsettings.Development.json`** - Development settings (`cloudbb_dev` database)
-- **`.gitlab-ci.yml`** - CI/CD with .NET 10.0 Alpine, caching, and Kaniko deployment
-- **`add-migration.sh`** - Custom migration script with validation
-
-## Project-Specific Patterns
-
-### Domain Model
-
-- **CloudbbUser extends Identity**: Custom domain properties while leveraging ASP.NET Core Identity
-- **Vote-based system**: CloudbbPost, CloudbbComment with CloudbbVote entities for user interactions
-- **Connection entities**: ICloudbbConnectionEntity for entity relationships
-
-### Error Prevention
-
-- **No magic strings** - use `nameof()` and constants
-- **Explicit null handling**: Use nullable reference types and avoid using the null-forgiving operator (`!`), unless absolutely necessary
-- **Named parameters** for clarity: `CompressionMode.Compress, leaveOpen: true`
-- **Global suppressions**: Configured in `GlobalSuppressions.cs` for EF migrations and API controllers
-
-When adding features, maintain consistency with existing patterns, follow the strict typing rules, ensure all new services implement interfaces and are properly registered in `Program.cs`, and write comprehensive tests following the MSTest v4 patterns.
+When adding features, maintain strict interface-driven design, follow the explicit typing rules, register all services in `Program.cs` with appropriate lifetimes, and write comprehensive MSTest v4 tests with mocked dependencies.
