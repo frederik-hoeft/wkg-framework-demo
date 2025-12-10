@@ -10,7 +10,7 @@
 /// <param name="ContentPreview">Truncated preview of the post content for quick reading.</param>
 /// <param name="VoteScore">Current voting score (upvotes minus downvotes) for post ranking.</param>
 /// <param name="LastModified">Timestamp of the most recent modification to the post.</param>
-/// <param name="IsEdited">Indicates whether the post has been edited after initial creation.</param>
+/// <param name="Revisions">Total number of revisions made to the post. Will be at least 1.</param>
 public sealed record PostListResponseEntry
 (
     Guid PostId,
@@ -19,5 +19,5 @@ public sealed record PostListResponseEntry
     string ContentPreview,
     int VoteScore,
     DateTime LastModified,
-    bool IsEdited
+    int Revisions
 );

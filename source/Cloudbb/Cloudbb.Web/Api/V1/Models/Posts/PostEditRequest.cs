@@ -5,12 +5,25 @@ namespace Cloudbb.Web.Api.V1.Models.Posts;
 /// <summary>
 /// Request payload for editing an existing post in the Cloudbb forum.
 /// </summary>
-/// <param name="PostId">The unique identifier of the post to be edited.</param>
-/// <param name="Title">The updated post title, limited to 256 characters.</param>
-/// <param name="Content">The updated main body content of the post.</param>
-public sealed record PostEditRequest
-(
-    [Required] Guid PostId,
-    [Required][StringLength(256)] string Title,
-    [Required] string Content
-);
+public sealed class PostEditRequest
+{
+    /// <summary>
+    /// The unique identifier of the post to be edited.
+    /// </summary>
+    [Required] 
+    public required Guid PostId { get; set; }
+
+    /// <summary>
+    /// The updated post title, limited to 256 characters.
+    /// </summary>
+    [Required]
+    [StringLength(256, MinimumLength = 1)] 
+    public required string Title { get; set; }
+
+    /// <summary>
+    /// The updated main body content of the post.
+    /// </summary>
+    [Required]
+    [MinLength(1)]
+    public required string Content { get; set; }
+}

@@ -47,7 +47,7 @@ internal sealed class JwtService(IConfiguration configuration, IJwtSigningKeyPro
             ValidateAudience = true,
             ValidAudience = configuration["Auth:Jwt:Audience"],
             ValidateLifetime = true,
-            ClockSkew = TimeSpan.Zero
+            ClockSkew = TimeSpan.Parse(configuration["Auth:Jwt:ClockSkew"]!),
         };
         ClaimsPrincipal principal = _tokenHandler.ValidateToken(token, validationParameters, out _);
         return principal;

@@ -1,13 +1,12 @@
 using Cloudbb.Web.Api.V1.Models;
+using Cloudbb.Web.Api.V1.Models.Comments;
 using Cloudbb.Web.Api.V1.Models.Posts;
 using Cloudbb.Web.Data;
 using Cloudbb.Web.Data.Model;
 using Cloudbb.Web.Services.Auth;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Query;
 using System.Data;
-using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using Wkg.AspNetCore.Abstractions.Controllers;
 using Wkg.AspNetCore.Transactions;
@@ -30,14 +29,30 @@ public sealed partial class PostsController
             return errorResult;
         }
         TimeZoneInfo tzinfo = request.TimeZone.GetTimeZoneInfo();
-        List<PostListResponseEntry> posts = await dbContext.Set<CloudbbPost>().AsNoTracking()
+        var query = dbContext.Set<CloudbbPost>().AsNoTracking()
             // subselect to get latest revision per post
             .Select(post => new
             {
                 Post = post,
                 // invariant: posts always have at least one revision
                 LatestRevision = post.Revisions.OrderByDescending(rev => rev.CreationTime).First(),
-            })
+                // post score is the sum of all vote values (+1 for upvote, -1 for downvote)
+                VoteScore = post.Votes.Select(vote => vote.Value).Sum()
+            });
+
+        // apply sorting
+        query = (request.SortOrder, request.SortMode) switch
+        {
+            (SortOrder.Ascending, PostListSortMode.Activity) => query.OrderBy(postEntry => postEntry.LatestRevision.CreationTime),
+            (SortOrder.Descending, PostListSortMode.Activity) => query.OrderByDescending(postEntry => postEntry.LatestRevision.CreationTime),
+            (SortOrder.Ascending, PostListSortMode.Score) => query.OrderBy(postEntry => postEntry.VoteScore).ThenBy(postEntry => postEntry.LatestRevision.CreationTime),
+            _ => query.OrderByDescending(postEntry => postEntry.VoteScore).ThenByDescending(postEntry => postEntry.LatestRevision.CreationTime),
+        };
+
+        List<PostListResponseEntry> posts = await query
+            // apply pagination
+            .Skip((request.PageNumber - 1) * request.PageSize)
+            .Take(request.PageSize)
             // construct result entries
             .Select(postInfo => new PostListResponseEntry
             (
@@ -48,14 +63,13 @@ public sealed partial class PostsController
                 postInfo.LatestRevision.Content.Length <= 512
                     ? postInfo.LatestRevision.Content
                     : postInfo.LatestRevision.Content.Substring(0, 512),
-                // post score is the sum of all vote values (+1 for upvote, -1 for downvote)
-                postInfo.Post.Votes.Select(vote => vote.Value).Sum(),
+                postInfo.VoteScore,
                 // convert database UTC time to provided timezone
                 TimeZoneInfo.ConvertTimeFromUtc(postInfo.LatestRevision.CreationTime, tzinfo),
-                // a post is considered edited if it has more than one revision
-                postInfo.Post.Revisions.Count > 1
+                postInfo.Post.Revisions.Count
             ))
             .ToListAsync(ct);
+
         return Ok(new PostListResponse(posts));
     }, cancellationToken);
 
@@ -93,8 +107,7 @@ public sealed partial class PostsController
                     .FirstOrDefault(),
                 // convert database UTC time to provided timezone
                 TimeZoneInfo.ConvertTimeFromUtc(postInfo.LatestRevision.CreationTime, tzinfo),
-                // a post is considered edited if it has more than one revision
-                postInfo.Post.Revisions.Count > 1,
+                postInfo.Post.Revisions.Count,
                 // user can edit if they are the author of the post
                 postInfo.Post.UserId == userId,
                 request.IncludeComments
@@ -197,12 +210,18 @@ public sealed partial class PostsController
         {
             return transaction.Rollback(errorResult);
         }
+        // get the post along with any existing vote by this user
         CloudbbPost? post = await dbContext.Set<CloudbbPost>()
             .Include(p => p.Votes.Where(vote => vote.UserId == userId))
             .FirstOrDefaultAsync(p => p.Id == request.PostId, ct);
         if (post is null)
         {
             return transaction.Rollback(NotFound());
+        }
+        if (post.UserId == userId)
+        {
+            // users cannot vote on their own posts
+            return transaction.Rollback(Forbid());
         }
         if (post.Votes is [var existingVote, ..])
         {
@@ -230,6 +249,7 @@ public sealed partial class PostsController
             dbContext.Add(newVote);
         }
         await dbContext.SaveChangesAsync(ct);
+        // just fully refresh from database as a source of ground truth
         PostVoteResponse? response = await dbContext.Set<CloudbbPost>().AsNoTracking()
             .Where(p => p.Id == post.Id)
             .Select(p => new PostVoteResponse
@@ -237,7 +257,6 @@ public sealed partial class PostsController
                 p.Id,
                 // recalculate post score
                 p.Votes.Select(vote => vote.Value).Sum(),
-                // just fully refresh from database as a source of ground truth
                 // user's vote on this post (+1,-1), or None (0) if the user hasn't voted
                 (VoteType)p.Votes
                     .Where(vote => vote.UserId == userId)

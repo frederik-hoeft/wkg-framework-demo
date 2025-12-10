@@ -6,10 +6,18 @@ namespace Cloudbb.Web.Api.V1.Models.Auth;
 /// <summary>
 /// Represents a login request.
 /// </summary>
-/// <param name="Email">The email address of the user.</param>
-/// <param name="Password">The password of the user.</param>
-public sealed record LoginRequest
-(
-    [Required][ValidEmailAddress] string Email,
-    [Required] string Password
-);
+public sealed class LoginRequest
+{
+    /// <summary>
+    /// The email address of the user.
+    /// </summary>
+    [Required]
+    [ValidEmailAddress]
+    public required string Email { get; set; }
+
+    /// <summary>
+    /// The password of the user.
+    /// </summary>
+    [Required]
+    public required string Password { get; set; }
+}

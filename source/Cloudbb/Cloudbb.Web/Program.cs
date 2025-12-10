@@ -7,11 +7,11 @@ using Cloudbb.Web.Services.Auth.Default;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
-using Swashbuckle.AspNetCore.SwaggerUI;
 using System.Data;
 using System.Text;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using Wkg.AspNetCore.Transactions.Configuration;
 using Wkg.EntityFrameworkCore.Configuration;
 
@@ -52,16 +52,22 @@ builder.Services.AddAuthentication(options =>
     options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
     options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
 })
-.AddJwtBearer(options => options.TokenValidationParameters = new TokenValidationParameters
+.AddJwtBearer(options =>
 {
-    ValidateIssuer = true,
-    ValidateAudience = true,
-    ValidateLifetime = true,
-    ValidateIssuerSigningKey = true,
-    ValidIssuer = builder.Configuration["Auth:Jwt:Issuer"],
-    ValidAudience = builder.Configuration["Auth:Jwt:Audience"],
-    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["Auth:Jwt:Key"]!)),
-    ClockSkew = TimeSpan.Zero
+    JwtECDsaPemFileSigningKeyImportService keyImportService = new(builder.Configuration);
+    JwtECDsaSigningKeyProvider keyLoader = new(keyImportService);
+    Task<SecurityKey> keyTask = keyLoader.GetKeyAsync().AsTask();
+    keyTask.Wait();
+    options.TokenValidationParameters = new TokenValidationParameters
+    {
+        ValidateIssuer = true,
+        ValidateAudience = true,
+        ValidateLifetime = true,
+        ValidIssuer = builder.Configuration["Auth:Jwt:Issuer"],
+        ValidAudience = builder.Configuration["Auth:Jwt:Audience"],
+        IssuerSigningKey = keyTask.Result,
+        ClockSkew = TimeSpan.Parse(builder.Configuration["Auth:Jwt:ClockSkew"]!),
+    };
 });
 
 builder.Services.AddAuthorization();
@@ -82,7 +88,16 @@ builder.Services.AddScoped<IJwtService, JwtService>();
 builder.Services.AddScoped<IUserClaimIndex, UserClaimIndex>();
 builder.Services.AddSingleton<ITimingRandomizationService, CsprngTimingRandomizationService>();
 
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        JsonNamingPolicy namingPolicy = JsonNamingPolicy.CamelCase;
+
+        JsonStringEnumConverter enumConverter = new(namingPolicy);
+        options.JsonSerializerOptions.Converters.Add(enumConverter);
+        options.JsonSerializerOptions.PropertyNamingPolicy = namingPolicy;
+        options.JsonSerializerOptions.WriteIndented = true;
+    });
 builder.Services.AddApiVersioning(options =>
 {
     options.AssumeDefaultVersionWhenUnspecified = true;

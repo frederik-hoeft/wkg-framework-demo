@@ -1,16 +1,32 @@
-﻿using System.ComponentModel;
+﻿using Cloudbb.Web.Configuration.Swagger.Attributes;
+using System.ComponentModel;
 
 namespace Cloudbb.Web.Api.V1.Models;
 
-public readonly record struct TimeZone
-(
-    [DefaultValue("UTC")] string? IanaTimeZoneId = null,
-    [DefaultValue("00:00:00")] TimeSpan? TimeZoneOffset = null
-)
+/// <summary>
+/// Represents timezone information for accurate timestamp display to users.
+/// Supports both IANA timezone identifiers and direct offset specification,
+/// enabling proper localization of dates across different geographical regions.
+/// </summary>
+public sealed class TimeZone
 {
-    internal readonly string IanaId => IanaTimeZoneId ?? "UTC";
+    /// <summary>
+    /// IANA timezone identifier.
+    /// </summary>
+    [ExampleValue("Europe/Berlin")]
+    [DefaultValue("UTC")]
+    public string? IanaTimeZoneId { get; set; }
 
-    internal readonly TimeSpan Offset => TimeZoneOffset ?? TimeSpan.Zero;
+    /// <summary>
+    /// Direct offset from UTC when IANA ID is unavailable
+    /// </summary>
+    [ExampleValue("01:00:00")]
+    [DefaultValue("00:00:00")]
+    public TimeSpan? TimeZoneOffset { get; set; }
+
+    internal string IanaId => IanaTimeZoneId ?? "UTC";
+
+    internal TimeSpan Offset => TimeZoneOffset ?? TimeSpan.Zero;
 
     internal TimeZoneInfo GetTimeZoneInfo()
     {
