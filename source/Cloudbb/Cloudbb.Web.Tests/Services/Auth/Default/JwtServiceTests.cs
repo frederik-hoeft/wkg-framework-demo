@@ -150,6 +150,7 @@ public sealed class JwtServiceTests
     {
         // Arrange
         _mockConfiguration.Setup(x => x["Auth:Jwt:TimeToLive"]).Returns("-00:01:00"); // Expired 1 minute ago
+        _mockConfiguration.Setup(x => x["Auth:Jwt:ClockSkew"]).Returns("00:00:00");   // No clock skew for testing
         JwtService serviceWithExpiredTime = new(_mockConfiguration.Object, _mockSigningKeyProvider.Object, _mockAlgorithmProvider.Object);
         
         IJwtToken expiredToken = await serviceWithExpiredTime.GenerateTokenAsync(_testUser, ["User"], TestContext.CancellationToken);
@@ -242,6 +243,7 @@ public sealed class JwtServiceTests
         _mockConfiguration.Setup(x => x["Auth:Jwt:Audience"]).Returns("test-audience");
         _mockConfiguration.Setup(x => x["Auth:Jwt:TimeToLive"]).Returns("01:00:00");
         _mockConfiguration.Setup(x => x["Auth:Jwt:Key"]).Returns("test-key-that-is-long-enough-for-hmac-sha256");
+        _mockConfiguration.Setup(x => x["Auth:Jwt:ClockSkew"]).Returns("00:05:00");
     }
 
     private void SetupMockDependencies()
