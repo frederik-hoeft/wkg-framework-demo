@@ -48,7 +48,7 @@ public sealed class CloudbbComment() : CloudbbEntity, IDiscoverableModelConfigur
     /// Collection of user votes (upvotes/downvotes) for this comment.
     /// Used for calculating comment score and quality ranking.
     /// </summary>
-    public ICollection<CloudbbCommentVote> Votes { get; set; } = null!;
+    public List<CloudbbCommentVote> Votes { get; set; } = null!;
 
     /// <inheritdoc />
     public static void Configure(EntityTypeBuilder<CloudbbComment> self)

@@ -26,19 +26,19 @@ public sealed class CloudbbPost() : CloudbbEntity, IDiscoverableModelConfigurati
     /// Collection of all revisions for this post, tracking edit history.
     /// The latest revision contains the current title and content.
     /// </summary>
-    public ICollection<CloudbbPostRevision> Revisions { get; set; } = null!;
+    public List<CloudbbPostRevision> Revisions { get; set; } = null!;
 
     /// <summary>
     /// Collection of user comments on this post.
     /// Enables threaded discussions and user engagement.
     /// </summary>
-    public ICollection<CloudbbComment> Comments { get; set; } = null!;
+    public List<CloudbbComment> Comments { get; set; } = null!;
 
     /// <summary>
     /// Collection of user votes (upvotes/downvotes) for this post.
     /// Used for calculating post score and ranking in listings.
     /// </summary>
-    public ICollection<CloudbbPostVote> Votes { get; set; } = null!;
+    public List<CloudbbPostVote> Votes { get; set; } = null!;
 
     /// <inheritdoc />
     public static void Configure(EntityTypeBuilder<CloudbbPost> self)

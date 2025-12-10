@@ -32,7 +32,7 @@
         <PackageReference Include="Wkg.EntityFrameworkCore" Version="10.0.18979-rc" />
         <!-- TODO: replace with Wkg.EntityFrameworkCore.Discovery.SourceGeneration once it has cleared internal review -->
         <!-- TODO: (unofficial preview package) remove once official package is available -->
-		<PackageReference Include="019af44d1e9c73358e4519cf0d08516d" Version="10.0.18980" >
+		<PackageReference Include="019af44d1e9c73358e4519cf0d08516d" Version="10.0.18980">
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>

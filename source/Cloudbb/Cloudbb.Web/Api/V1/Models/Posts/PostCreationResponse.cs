@@ -5,4 +5,4 @@
 /// Contains the unique identifier that can be used to reference the created post.
 /// </summary>
 /// <param name="PostId">The unique identifier of the newly created post.</param>
-public record PostCreationResponse(Guid PostId);
+public sealed record PostCreationResponse(Guid PostId);

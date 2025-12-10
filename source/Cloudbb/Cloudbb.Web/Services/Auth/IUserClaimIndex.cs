@@ -31,9 +31,9 @@ public interface IUserClaimIndex
     /// <summary>
     /// Attempts to extract the username from the current authentication context.
     /// </summary>
-    /// <param name="userName">When successful, contains the user's display name.</param>
+    /// <param name="username">When successful, contains the user's display name.</param>
     /// <returns>True if the username was successfully extracted; otherwise, false.</returns>
-    bool TryGetUsername([NotNullWhen(true)] out string? userName);
+    bool TryGetUsername([NotNullWhen(true)] out string? username);
 
     /// <summary>
     /// Gets the username from the current authentication context.

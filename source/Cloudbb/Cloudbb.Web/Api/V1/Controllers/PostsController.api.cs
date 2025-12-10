@@ -11,22 +11,26 @@ namespace Cloudbb.Web.Api.V1.Controllers;
 [Route("api/v{version:apiVersion}/posts")]
 public partial class PostsController
 {
-    /// <summary>
-    /// Retrieves a list of all posts with optional timezone adjustment.
-    /// </summary>
-    /// <param name="tz">The IANA timezone identifier (e.g., <c>Europe/Berlin</c>).</param>
-    /// <param name="tzoffset">Alternative timezone offset from UTC if <paramref name="tz"/> is not provided.</param>
-    /// <param name="cancellationToken">The cancellation token to observe.</param>
-    [HttpGet]
+    [HttpPost("list")]
     [ProducesResponseType<PostListResponse>(StatusCodes.Status200OK)]
-    public partial Task<IActionResult> GetPostsAsync(string? tz = null, TimeSpan? tzoffset = null, CancellationToken cancellationToken = default);
+    public partial Task<IActionResult> GetPostsAsync([FromBody] PostListRequest request, CancellationToken cancellationToken);
+    
+    [HttpPost("read")]
+    [ProducesResponseType<PostReadResponse>(StatusCodes.Status200OK)]
+    public partial Task<IActionResult> GetPostAsync([FromBody] PostReadRequest request, CancellationToken cancellationToken);
 
-    /// <summary>
-    /// Creates a new post from the provided request data.
-    /// </summary>
-    /// <param name="request">The post creation request data.</param>
-    /// <param name="cancellationToken">The cancellation token to observe.</param>
     [HttpPost("create")]
     [ProducesResponseType<PostCreationResponse>(StatusCodes.Status200OK)]
     public partial Task<IActionResult> CreatePostAsync([FromBody] PostCreationRequest request, CancellationToken cancellationToken);
+
+    [HttpPost("edit")]
+    [ProducesResponseType<PostEditResponse>(StatusCodes.Status200OK)]
+    public partial Task<IActionResult> EditPostAsync([FromBody] PostEditRequest request, CancellationToken cancellationToken);
+
+    [HttpPost("delete")]
+    public partial Task<IActionResult> DeletePostAsync([FromBody] PostDeleteRequest request, CancellationToken cancellationToken);
+
+    [HttpPost("vote")]
+    [ProducesResponseType<PostVoteResponse>(StatusCodes.Status200OK)]
+    public partial Task<IActionResult> VotePostAsync([FromBody] PostVoteRequest request, CancellationToken cancellationToken);
 }
