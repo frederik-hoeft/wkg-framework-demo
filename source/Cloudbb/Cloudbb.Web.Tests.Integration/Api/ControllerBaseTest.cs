@@ -1,7 +1,10 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using Cloudbb.Web.Data;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Moq;
+using Wkg.AspNetCore.Transactions;
 
 namespace Cloudbb.Web.Tests.Integration.Api;
 
@@ -19,17 +22,15 @@ public abstract class ControllerBaseTest<TController> : ComponentIntegrationTest
     }, cancellationToken);
 
     protected static Task UsingControllerAsync(Func<TController, IServiceProvider, CancellationToken, Task> unitTestTask, CancellationToken cancellationToken = default) => 
-        UsingComponentAsync(async (controller, serviceProvider, ct) =>
-    {
-        ArgumentNullException.ThrowIfNull(unitTestTask);
-
-        Mock<HttpContext> httpContextMock = new();
-        httpContextMock.SetupGet(c => c.RequestServices).Returns(serviceProvider);
-        controller.ControllerContext = new ControllerContext
-        {
-            HttpContext = httpContextMock.Object,
-        };
-
-        await unitTestTask(controller, serviceProvider, ct);
-    }, cancellationToken);
+        UsingComponentAsync((controller, serviceProvider, ct1) => 
+            serviceProvider.GetRequiredService<ITransactionService<ApplicationDbContext>>().Scoped.RunReadOnlyAsync(async (_, ct2) =>
+            {
+                ArgumentNullException.ThrowIfNull(unitTestTask);
+                controller.ControllerContext = new ControllerContext
+                {
+                    HttpContext = serviceProvider.GetRequiredService<IHttpContextAccessor>().HttpContext!
+                };
+                await unitTestTask(controller, serviceProvider, ct2);
+            },ct1)
+        ,cancellationToken);
 }

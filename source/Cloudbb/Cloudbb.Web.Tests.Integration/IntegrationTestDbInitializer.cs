@@ -1,8 +1,10 @@
 ﻿using Cloudbb.Web.Data;
+using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Moq;
 using Wkg.AspNetCore.Configuration;
 using Wkg.AspNetCore.TestAdapters.Initialization;
 using Wkg.AspNetCore.TestAdapters.Initialization.Extensions;
@@ -21,6 +23,13 @@ public sealed class IntegrationTestDbInitializer : IAsyncDITestInitializer
         // since we're not running in a full WebApplication context, we need to register the configuration and some required services manually
         services.AddSingleton(configuration);
         services.AddLogging(logging => logging.AddConsole());
+        services.AddScoped<IHttpContextAccessor, HttpContextAccessor>(serviceProvider => new HttpContextAccessor()
+        {
+            HttpContext = new DefaultHttpContext
+            {
+                RequestServices = serviceProvider
+            }
+        });
     }
 
     public static async ValueTask InitializeAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
