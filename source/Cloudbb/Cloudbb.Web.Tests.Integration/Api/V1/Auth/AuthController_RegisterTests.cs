@@ -9,36 +9,38 @@ using System.Security.Claims;
 namespace Cloudbb.Web.Tests.Integration.Api.V1.Auth;
 
 [TestClass]
-public sealed class AuthController_RegisterTests : ComponentIntegrationTest<AuthController>
+public sealed class AuthController_RegisterTests : ControllerBaseTest<AuthController>
 {
-    public TestContext TestContext { get; set; }
+    public override TestContext TestContext { get; set; }
 
     [TestMethod]
-    public Task RegisterAsync_ShouldSucceed() => UsingComponentAsync(async (controller, serviceProvider, ct) =>
+    public Task RegisterAsync_ShouldSucceed()
     {
         // Arrange
         Guid seed = Guid.CreateVersion7();
         RegisterRequest request = new()
         {
             Email = $"{seed}@example.com",
-            Username = $"user_{seed:N}",
+            Username = $"user_{seed:N}"[..16],
             Password = $"P@ssw0rd{seed}",
             ConfirmPassword = $"P@ssw0rd{seed}",
         };
 
-        // Act
-        controller.TryValidateModel(request);
-        IActionResult result = await controller.RegisterAsync(request, ct);
+        return UsingControllerAsync(request, async (controller, serviceProvider, ct) =>
+        {
+            // Act
+            IActionResult result = await controller.RegisterAsync(request, ct);
 
-        // Assert
-        Assert.IsNotNull(result);
-        OkObjectResult ok = Assert.IsInstanceOfType<OkObjectResult>(result);
-        AuthResponse response = Assert.IsInstanceOfType<AuthResponse>(ok.Value);
-        Assert.IsTrue(response.IsSuccess);
-        Assert.IsNotNull(response.Token);
-        // the generated token should be valid
-        IJwtService jwtService = serviceProvider.GetRequiredService<IJwtService>();
-        ClaimsPrincipal validationResult = await jwtService.ValidateTokenAsync(response.Token, ct);
-        Assert.IsNotNull(validationResult);
-    }, TestContext.CancellationToken);
+            // Assert
+            Assert.IsNotNull(result);
+            OkObjectResult ok = Assert.IsInstanceOfType<OkObjectResult>(result);
+            AuthResponse response = Assert.IsInstanceOfType<AuthResponse>(ok.Value);
+            Assert.IsTrue(response.IsSuccess);
+            Assert.IsNotNull(response.Token);
+            // the generated token should be valid
+            IJwtService jwtService = serviceProvider.GetRequiredService<IJwtService>();
+            ClaimsPrincipal validationResult = await jwtService.ValidateTokenAsync(response.Token, ct);
+            Assert.IsNotNull(validationResult);
+        }, TestContext.CancellationToken);
+    }
 }
