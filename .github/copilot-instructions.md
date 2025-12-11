@@ -13,6 +13,8 @@ ASP.NET Core 10.0 Web API with Identity authentication, JWT tokens, PostgreSQL d
 - **`Data/Model/`** - Domain entities (CloudbbUser extends Identity, CloudbbPost/Comment with voting system)
 - **`Services/Auth/`** - Interface-driven JWT authentication services with ECDSA signing
 - **`Configuration/`** - API versioning, Swagger configuration with grouped endpoints
+- **`source/Cloudbb/Cloudbb.Web.Tests/`** - Unit tests using MSTest v4 with Moq
+- **`source/Cloudbb/Cloudbb.Web.Tests.Integration/`** - Integration tests with PostgreSQL test database
 
 ### Technology Stack
 
@@ -20,8 +22,9 @@ ASP.NET Core 10.0 Web API with Identity authentication, JWT tokens, PostgreSQL d
 - **PostgreSQL** via Npgsql.EntityFrameworkCore.PostgreSQL with source-generated model discovery
 - **ASP.NET Core Identity** with JWT Bearer authentication (zero clock skew)
 - **Entity Framework Core** with auto-apply migrations on startup
-- **MSTest.Sdk/4.0.2** for testing with Moq 4.20.72
+- **MSTest.Sdk/4.0.1** for testing with Moq 4.20.72
 - **API Versioning** with grouped Swagger docs in Development
+- **GitLab CI/CD** with staged builds, unit tests, and integration tests
 
 ## Critical Coding Standards
 
@@ -65,6 +68,7 @@ dotnet ef database update
 dotnet build source/Cloudbb/Cloudbb.slnx
 dotnet run --project source/Cloudbb/Cloudbb.Web
 dotnet test source/Cloudbb/Cloudbb.Web.Tests
+dotnet test source/Cloudbb/Cloudbb.Web.Tests.Integration
 ```
 
 ## Service Patterns
@@ -76,6 +80,8 @@ All business services implement interfaces for testability:
 ```csharp
 // Service registration pattern in Program.cs
 builder.Services.AddSingleton<IJwtAlgorithmProvider, JwtEcdsaSha256AlgorithmProvider>();
+builder.Services.AddSingleton<IJwtECDsaSigningKeyImportService, JwtECDsaPemFileSigningKeyImportService>();
+builder.Services.AddSingleton<IJwtSigningKeyProvider, JwtECDsaSigningKeyProvider>();
 builder.Services.AddScoped<IJwtService, JwtService>();
 
 // Interface definition pattern
@@ -87,7 +93,7 @@ public interface IJwtService
 
 ### Authentication Architecture
 
-- **JWT with ECDSA signing** (not HMAC) for production security
+- **JWT with ECDSA signing** (ES256) for production security via PEM key files
 - **Zero clock skew** validation: `ClockSkew = TimeSpan.Zero`
 - **Claims-based** with `NameIdentifier`, `Name`, `Email`, `Role`, `Jti`, `Iat`
 - **Global authorization** with `[Authorize]` on controllers
@@ -136,6 +142,64 @@ public sealed class ServiceNameTests
 - **Test internal services directly** without exposing them publicly
 - **Mock all dependencies** for isolation testing
 
+## Integration Testing
+
+### PostgreSQL Test Database
+
+- **Integration tests**: `source/Cloudbb/Cloudbb.Web.Tests.Integration/`
+- **Test database**: Separate PostgreSQL instance for integration tests
+- **GitLab CI**: Uses `postgres:18-trixie` service container
+- **Database initialization**: `IntegrationTestDbInitializer` and `DatabaseInitializer`
+- **Component testing**: `ComponentIntegrationTest` base class for end-to-end scenarios
+
+### Integration Test Patterns
+
+**CRITICAL**: Integration tests use `Wkg.AspNetCore.TestAdapters` which provides automatic transaction rollback for each test scope, regardless of whether tested services attempt to commit transactions.
+
+#### Controller Integration Tests
+
+Follow this established pattern for controller tests:
+
+```csharp
+[TestClass]
+public sealed class ControllerName_ActionTests : ControllerBaseTest<ControllerName>
+{
+    public override TestContext TestContext { get; set; }
+
+    [TestMethod]
+    public Task ActionAsync_WithCondition_ExpectedBehaviorAsync()
+    {
+        // Arrange
+        RequestType request = new()
+        {
+            Property = "SomeValue"
+        };
+        // performs model validation with the request, creates a service scope and controller instance
+        return UsingControllerAsync(request, async (controller, serviceProvider, ct) =>
+        {
+            // Act
+            IActionResult result = await controller.ActionAsync(request, ct);
+
+            // Assert
+            Assert.IsNotNull(result);
+            OkObjectResult ok = Assert.IsInstanceOfType<OkObjectResult>(result);
+            ResponseType response = Assert.IsInstanceOfType<ResponseType>(ok.Value);
+            // Additional assertions...
+        }, TestContext.CancellationToken);
+    }
+}
+```
+
+#### Key Integration Test Guidelines
+
+- **Inherit from**: `ControllerBaseTest<TController>` for API controllers, `ComponentIntegrationTest<TComponent>` for services
+- **File naming**: `ControllerName_ActionTests.cs` for controller actions
+- **Test data**: Either inline (will be rolled back) or via `IntegrationTestDbLoader` for global pre-seeded data
+- **Async pattern**: Always return `Task` from test methods, use `TestContext.CancellationToken`
+- **Database isolation**: Each test runs in its own transaction scope that auto-rolls back
+- **Service access**: Use `serviceProvider.GetRequiredService<T>()` to access registered services
+- **Validation**: Use `UsingControllerAsync(request, ...)` to enable model validation
+
 ## EF Core Patterns
 
 ### Explicit Mapping Requirements
@@ -171,5 +235,14 @@ builder.LoadModels(modelLoader, modelOptions => modelOptions
 - **Swagger**: Development-only with Bearer auth, grouped by version
 - **Connection strings**: `DatabaseConnection` for PostgreSQL (`cloudbb`/`cloudbb_dev`)
 - **JWT settings**: `Auth:Jwt:*` configuration keys
+
+## CI/CD Pipeline
+
+### GitLab CI Stages
+- **Build**: `dotnet build` with dependency caching
+- **Unit Tests**: `dotnet test Cloudbb.Web.Tests` 
+- **Integration Tests**: `dotnet test Cloudbb.Web.Tests.Integration` with PostgreSQL service
+- **Caching**: NuGet packages and build artifacts cached per stage/branch
+- **Environment**: Uses `mcr.microsoft.com/dotnet/sdk:10.0-alpine` image
 
 When adding features, maintain strict interface-driven design, follow the explicit typing rules, register all services in `Program.cs` with appropriate lifetimes, and write comprehensive MSTest v4 tests with mocked dependencies.

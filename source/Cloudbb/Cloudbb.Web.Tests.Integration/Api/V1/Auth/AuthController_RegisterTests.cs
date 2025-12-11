@@ -21,6 +21,7 @@ public sealed class AuthController_RegisterTests : ControllerBaseTest<AuthContro
         RegisterRequest request = new()
         {
             Email = $"{seed}@example.com",
+            // max length is 32, so choose something safe
             Username = $"user_{seed:N}"[..16],
             Password = $"P@ssw0rd{seed}",
             ConfirmPassword = $"P@ssw0rd{seed}",
