@@ -1,0 +1,15 @@
+﻿<Project Sdk="MSTest.Sdk/4.0.1">
+	<PropertyGroup>
+		<TargetFramework>net10.0</TargetFramework>
+		<LangVersion>latest</LangVersion>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+		<UseVSTest>true</UseVSTest>
+	</PropertyGroup>
+	<ItemGroup>
+		<PackageReference Include="Wkg.AspNetCore.TestAdapters" Version="10.0.19015-rc" />
+	</ItemGroup>
+	<ItemGroup>
+		<ProjectReference Include="..\Cloudbb.Web\Cloudbb.Web.csproj" />
+	</ItemGroup>
+</Project>
