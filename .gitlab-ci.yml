@@ -25,20 +25,38 @@ variables:
       # Path to the directory where restored dependencies are kept.
       - '$NUGET_PACKAGES_DIRECTORY'
     policy: pull-push
-  before_script:
-    - 'dotnet restore "${SOURCE_CODE_PATH}" --packages "${NUGET_PACKAGES_DIRECTORY}"'
+  before_script: &base_before_script
+    - dotnet restore "${SOURCE_CODE_PATH}" --packages "${NUGET_PACKAGES_DIRECTORY}"
 
 build:
   extends: .dotnet-base
   stage: build
   script:
-    - 'dotnet build "${SOURCE_CODE_PATH}" --no-restore'
+    - dotnet build "${SOURCE_CODE_PATH}" --no-restore
 
-tests:
+unit-tests:
   extends: .dotnet-base
   stage: test
   script:
-    - 'dotnet test "${SOURCE_CODE_PATH}" --no-restore'
+    - dotnet test "${SOURCE_CODE_PATH}/Cloudbb.Web.Tests" --no-restore
+
+integration-tests:
+  extends: .dotnet-base
+  stage: test
+  services:
+    - name: postgres:18-trixie
+      alias: postgres
+      variables:
+        POSTGRES_DB: postgres_e2e
+        POSTGRES_USER: postgres
+        POSTGRES_PASSWORD: postgres
+  before_script:
+    - *base_before_script
+    # set up ECDSA keys for JWT signing
+    - apk add --no-cache openssl
+    - openssl ecparam -out /tmp/Cloudbb.Web.Tests.Integration.ecdsa_key.pem -name secp256r1 -genkey
+  script:
+    - dotnet test "${SOURCE_CODE_PATH}/Cloudbb.Web.Tests.Integration" --no-restore
 
 construct-version:
   image: debian:trixie-slim
