@@ -54,7 +54,7 @@ integration-tests:
     - *base_before_script
     # set up ECDSA keys for JWT signing
     - apk add --no-cache openssl
-    - openssl ecparam -out /tmp/Cloudbb.Web.Tests.Integration.ecdsa_key.pem -name secp256r1 -genkey
+    - openssl ecparam -out /tmp/Cloudbb.Web.Tests.Integration.ecdsa_key.pem -name prime256v1 -genkey
   script:
     - dotnet test "${SOURCE_CODE_PATH}/Cloudbb.Web.Tests.Integration" --no-restore
 
