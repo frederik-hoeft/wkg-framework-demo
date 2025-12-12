@@ -17,31 +17,23 @@ public sealed class AuthController_EndToEndTests : ControllerBaseTest<AuthContro
     public override TestContext TestContext { get; set; }
 
     [TestMethod]
-    public Task AuthFlow_RegisterThenLogin_ShouldWorkEndToEndAsync()
+    public Task AuthFlow_RegisterThenLogin_ShouldWorkEndToEndAsync() => UsingTransactionAsync(async (_, ct) =>
     {
         // Arrange
         string email = "MyTestUser@example.com";
         string username = "MyTestUser";
         string password = "P@ssw0rdMyTestUser";
 
-        RegisterRequest registerRequest = new()
+        await UsingComponentAsync(new RegisterRequest()
         {
             Email = email,
             Username = username,
             Password = password,
             ConfirmPassword = password,
-        };
-
-        LoginRequest loginRequest = new()
-        {
-            Email = email,
-            Password = password
-        };
-
-        return UsingControllerAsync(registerRequest, async (controller, serviceProvider, ct) =>
+        }, async (controller, request, serviceProvider, ct1) =>
         {
             // Act 1 - Register new user
-            IActionResult registerResult = await controller.RegisterAsync(registerRequest, ct);
+            IActionResult registerResult = await controller.RegisterAsync(request, ct1);
 
             // Assert 1 - Registration should succeed
             Assert.IsNotNull(registerResult);
@@ -52,11 +44,28 @@ public sealed class AuthController_EndToEndTests : ControllerBaseTest<AuthContro
 
             // Verify first token is valid
             IJwtService jwtService = serviceProvider.GetRequiredService<IJwtService>();
-            ClaimsPrincipal firstTokenValidation = await jwtService.ValidateTokenAsync(registerResponse.Token, ct);
+            ClaimsPrincipal firstTokenValidation = await jwtService.ValidateTokenAsync(registerResponse.Token, ct1);
             Assert.IsNotNull(firstTokenValidation);
 
+            // ensure token as correct claims
+            bool firstHasUserRole = firstTokenValidation.IsInRole("user");
+            Assert.IsTrue(firstHasUserRole);
+            string? firstUserId = firstTokenValidation.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            Assert.IsNotNull(firstUserId);
+            string? firstName = firstTokenValidation.FindFirst(ClaimTypes.Name)?.Value;
+            Assert.AreEqual(username, firstName);
+            string? firstEmail = firstTokenValidation.FindFirst(ClaimTypes.Email)?.Value;
+            Assert.AreEqual(email, firstEmail);
+        }, ct);
+
+        await UsingComponentAsync(new LoginRequest()
+        {
+            Email = email,
+            Password = password
+        }, async (controller, request, serviceProvider, ct1) =>
+        {
             // Act 2 - Login with the same credentials
-            IActionResult loginResult = await controller.LoginAsync(loginRequest, ct);
+            IActionResult loginResult = await controller.LoginAsync(request, ct1);
 
             // Assert 2 - Login should succeed
             Assert.IsNotNull(loginResult);
@@ -66,70 +75,60 @@ public sealed class AuthController_EndToEndTests : ControllerBaseTest<AuthContro
             Assert.IsNotNull(loginResponse.Token);
 
             // Verify second token is valid
-            ClaimsPrincipal secondTokenValidation = await jwtService.ValidateTokenAsync(loginResponse.Token, ct);
+            IJwtService jwtService = serviceProvider.GetRequiredService<IJwtService>();
+            ClaimsPrincipal secondTokenValidation = await jwtService.ValidateTokenAsync(loginResponse.Token, ct1);
             Assert.IsNotNull(secondTokenValidation);
 
-            // Both tokens should have the same user claims
-            string? firstUserId = firstTokenValidation.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            // ensure token as correct claims
             string? secondUserId = secondTokenValidation.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            Assert.IsNotNull(firstUserId);
             Assert.IsNotNull(secondUserId);
-            Assert.AreEqual(firstUserId, secondUserId);
-
-            string? firstName = firstTokenValidation.FindFirst(ClaimTypes.Name)?.Value;
             string? secondName = secondTokenValidation.FindFirst(ClaimTypes.Name)?.Value;
-            Assert.AreEqual(firstName, secondName);
-            Assert.AreEqual(username, firstName);
-
-            string? firstEmail = firstTokenValidation.FindFirst(ClaimTypes.Email)?.Value;
+            Assert.AreEqual(username, secondName);
             string? secondEmail = secondTokenValidation.FindFirst(ClaimTypes.Email)?.Value;
-            Assert.AreEqual(firstEmail, secondEmail);
-            Assert.AreEqual(email, firstEmail);
-
-            // Both tokens should have user role
-            bool firstHasUserRole = firstTokenValidation.IsInRole("user");
+            Assert.AreEqual(email, secondEmail);
             bool secondHasUserRole = secondTokenValidation.IsInRole("user");
-            Assert.IsTrue(firstHasUserRole);
             Assert.IsTrue(secondHasUserRole);
-        }, TestContext.CancellationToken);
-    }
+        }, ct);
+    }, TestContext.CancellationToken);
 
     [TestMethod]
-    public Task AuthFlow_RegisterLogoutLogin_ShouldWorkAsync()
+    public Task AuthFlow_RegisterLogoutLogin_ShouldWorkAsync() => UsingTransactionAsync(async (_, ct) =>
     {
         // Arrange
         string email = "MyTestUser@example.com";
         string username = "MyTestUser";
         string password = "P@ssw0rdMyTestUser";
 
-        RegisterRequest registerRequest = new()
+        // Act 1 - Register
+        await UsingComponentAsync(new RegisterRequest()
         {
             Email = email,
             Username = username,
             Password = password,
             ConfirmPassword = password,
-        };
-
-        LoginRequest loginRequest = new()
+        }, async (controller, request, serviceProvider, ct1) =>
         {
-            Email = email,
-            Password = password
-        };
-
-        return UsingControllerAsync(registerRequest, async (controller, serviceProvider, ct) =>
-        {
-            // Act 1 - Register
-            IActionResult registerResult = await controller.RegisterAsync(registerRequest, ct);
+            IActionResult registerResult = await controller.RegisterAsync(request, ct1);
             Assert.IsInstanceOfType<OkObjectResult>(registerResult);
+        }, ct);
 
-            // Act 2 - Logout
-            IActionResult logoutResult = await controller.LogoutAsync(ct);
+        // Act 2 - Logout
+        await UsingComponentAsync(async (controller, serviceProvider, ct1) =>
+        {
+            IActionResult logoutResult = await controller.LogoutAsync(ct1);
             Assert.IsNotNull(logoutResult);
             OkResult logoutOk = Assert.IsInstanceOfType<OkResult>(logoutResult);
             Assert.AreEqual(200, logoutOk.StatusCode);
+        }, ct);
 
-            // Act 3 - Login again after logout
-            IActionResult loginResult = await controller.LoginAsync(loginRequest, ct);
+        // Act 3 - Login again after logout
+        await UsingComponentAsync(new LoginRequest()
+        {
+            Email = email,
+            Password = password
+        }, async (controller, request, serviceProvider, ct1) =>
+        {
+            IActionResult loginResult = await controller.LoginAsync(request, ct1);
 
             // Assert - Login should still work after logout
             Assert.IsNotNull(loginResult);
@@ -140,10 +139,10 @@ public sealed class AuthController_EndToEndTests : ControllerBaseTest<AuthContro
 
             // Verify token is valid
             IJwtService jwtService = serviceProvider.GetRequiredService<IJwtService>();
-            ClaimsPrincipal tokenValidation = await jwtService.ValidateTokenAsync(loginResponse.Token, ct);
+            ClaimsPrincipal tokenValidation = await jwtService.ValidateTokenAsync(loginResponse.Token, ct1);
             Assert.IsNotNull(tokenValidation);
-        }, TestContext.CancellationToken);
-    }
+        }, ct);
+    }, TestContext.CancellationToken);
 
     [TestMethod]
     public Task AuthFlow_MultipleRegistrations_ShouldCreateSeparateUsersAsync()
@@ -165,10 +164,13 @@ public sealed class AuthController_EndToEndTests : ControllerBaseTest<AuthContro
             ConfirmPassword = "P@ssw0rdTestUser2",
         };
 
-        return UsingControllerAsync(request1, async (controller, serviceProvider, ct) =>
+        return UsingComponentAsync(async (controller, serviceProvider, ct) =>
         {
             // Act - Register two different users
+            controller.TryValidateModel(request1);
             IActionResult result1 = await controller.RegisterAsync(request1, ct);
+            controller.ModelState.Clear();
+            controller.TryValidateModel(request2);
             IActionResult result2 = await controller.RegisterAsync(request2, ct);
 
             // Assert - Both registrations should succeed

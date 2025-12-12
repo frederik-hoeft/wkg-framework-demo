@@ -17,154 +17,123 @@ public sealed class AuthController_LoginTests : ControllerBaseTest<AuthControlle
     public override TestContext TestContext { get; set; }
 
     [TestMethod]
-    public Task LoginAsync_WithValidCredentials_ShouldSucceedAsync()
+    public Task LoginAsync_WithValidCredentials_ShouldSucceedAsync() => UsingComponentAsync(new LoginRequest()
     {
-        // Arrange
-        string email = "MyTestUser@example.com";
-        string password = "P@ssw0rdMyTestUser";
-
-        LoginRequest request = new()
+        Email = "MyTestUser@example.com",
+        Password = "P@ssw0rdMyTestUser"
+    }, async (controller, request, serviceProvider, ct) =>
+    {
+        // First create a user to login with
+        UserManager<IdentityUser> userManager = serviceProvider.GetRequiredService<UserManager<IdentityUser>>();
+        ApplicationDbContext dbContext = serviceProvider.GetRequiredService<ApplicationDbContext>();
+            
+        IdentityUser identityUser = new()
         {
-            Email = email,
-            Password = password
+            UserName = "MyTestUser",
+            Email = request.Email
         };
-
-        return UsingControllerAsync(request, async (controller, serviceProvider, ct) =>
-        {
-            // First create a user to login with
-            UserManager<IdentityUser> userManager = serviceProvider.GetRequiredService<UserManager<IdentityUser>>();
-            ApplicationDbContext dbContext = serviceProvider.GetRequiredService<ApplicationDbContext>();
+        IdentityResult createResult = await userManager.CreateAsync(identityUser, request.Password);
+        Assert.IsTrue(createResult.Succeeded, string.Join("; ", createResult.Errors.Select(e => e.Description)));
             
-            IdentityUser identityUser = new()
-            {
-                UserName = "MyTestUser",
-                Email = email
-            };
-            IdentityResult createResult = await userManager.CreateAsync(identityUser, password);
-            Assert.IsTrue(createResult.Succeeded, string.Join("; ", createResult.Errors.Select(e => e.Description)));
+        await userManager.AddToRoleAsync(identityUser, "user");
             
-            await userManager.AddToRoleAsync(identityUser, "user");
-            
-            CloudbbUser user = new(identityUser);
-            dbContext.Add(user);
-            await dbContext.SaveChangesAsync(ct);
+        CloudbbUser user = new(identityUser);
+        dbContext.Add(user);
+        await dbContext.SaveChangesAsync(ct);
 
-            // Act
-            IActionResult result = await controller.LoginAsync(request, ct);
+        // Act
+        IActionResult result = await controller.LoginAsync(request, ct);
 
-            // Assert
-            Assert.IsNotNull(result);
-            OkObjectResult ok = Assert.IsInstanceOfType<OkObjectResult>(result);
-            AuthResponse response = Assert.IsInstanceOfType<AuthResponse>(ok.Value);
-            Assert.IsTrue(response.IsSuccess);
-            Assert.IsNotNull(response.Token);
-            Assert.IsNotNull(response.ExpiresAt);
-            Assert.IsTrue(response.ExpiresAt > DateTime.UtcNow);
+        // Assert
+        Assert.IsNotNull(result);
+        OkObjectResult ok = Assert.IsInstanceOfType<OkObjectResult>(result);
+        AuthResponse response = Assert.IsInstanceOfType<AuthResponse>(ok.Value);
+        Assert.IsTrue(response.IsSuccess);
+        Assert.IsNotNull(response.Token);
+        Assert.IsNotNull(response.ExpiresAt);
+        Assert.IsTrue(response.ExpiresAt > DateTime.UtcNow);
 
-            // Verify token is valid
-            IJwtService jwtService = serviceProvider.GetRequiredService<IJwtService>();
-            ClaimsPrincipal validationResult = await jwtService.ValidateTokenAsync(response.Token, ct);
-            Assert.IsNotNull(validationResult);
-        }, TestContext.CancellationToken);
-    }
+        // Verify token is valid
+        IJwtService jwtService = serviceProvider.GetRequiredService<IJwtService>();
+        ClaimsPrincipal validationResult = await jwtService.ValidateTokenAsync(response.Token, ct);
+        Assert.IsNotNull(validationResult);
+    }, TestContext.CancellationToken);
 
     [TestMethod]
-    public Task LoginAsync_WithInvalidEmail_ShouldReturnUnauthorizedAsync()
+    public Task LoginAsync_WithInvalidEmail_ShouldReturnUnauthorizedAsync() => UsingComponentAsync(new LoginRequest()
     {
-        // Arrange
-        LoginRequest request = new()
-        {
-            Email = "nonexistent@example.com",
-            Password = "P@ssw0rdMyTestUser"
-        };
+        Email = "nonexistent@example.com",
+        Password = "P@ssw0rdMyTestUser"
+    }, async (controller, request, serviceProvider, ct) =>
+    {
+        // Act
+        IActionResult result = await controller.LoginAsync(request, ct);
 
-        return UsingControllerAsync(request, async (controller, serviceProvider, ct) =>
-        {
-            // Act
-            IActionResult result = await controller.LoginAsync(request, ct);
-
-            // Assert
-            Assert.IsNotNull(result);
-            UnauthorizedObjectResult unauthorized = Assert.IsInstanceOfType<UnauthorizedObjectResult>(result);
-            AuthResponse response = Assert.IsInstanceOfType<AuthResponse>(unauthorized.Value);
-            Assert.IsFalse(response.IsSuccess);
-            Assert.IsNull(response.Token);
-            Assert.IsNotNull(response.Message);
-            Assert.AreEqual("Invalid email or password", response.Message);
-        }, TestContext.CancellationToken);
-    }
+        // Assert
+        Assert.IsNotNull(result);
+        UnauthorizedObjectResult unauthorized = Assert.IsInstanceOfType<UnauthorizedObjectResult>(result);
+        AuthResponse response = Assert.IsInstanceOfType<AuthResponse>(unauthorized.Value);
+        Assert.IsFalse(response.IsSuccess);
+        Assert.IsNull(response.Token);
+        Assert.IsNotNull(response.Message);
+        Assert.AreEqual("Invalid email or password", response.Message);
+    }, TestContext.CancellationToken);
 
     [TestMethod]
-    public Task LoginAsync_WithInvalidPassword_ShouldReturnUnauthorizedAsync()
+    public Task LoginAsync_WithInvalidPassword_ShouldReturnUnauthorizedAsync() => UsingComponentAsync(new LoginRequest()
     {
-        // Arrange
-        string email = "test@example.com";
-        string correctPassword = "P@ssw0rdMyTestUser";
-        string wrongPassword = "WrongP@ssMyTestUser";
-
-        LoginRequest request = new()
+        Email = "test@example.com",
+        Password = "WrongP@ssMyTestUser"
+    }, async (controller, request, serviceProvider, ct) =>
+    {
+        // First create a user
+        UserManager<IdentityUser> userManager = serviceProvider.GetRequiredService<UserManager<IdentityUser>>();
+        ApplicationDbContext dbContext = serviceProvider.GetRequiredService<ApplicationDbContext>();
+            
+        IdentityUser identityUser = new()
         {
-            Email = email,
-            Password = wrongPassword
+            UserName = "MyTestUser",
+            Email = request.Email
         };
-
-        return UsingControllerAsync(request, async (controller, serviceProvider, ct) =>
-        {
-            // First create a user
-            UserManager<IdentityUser> userManager = serviceProvider.GetRequiredService<UserManager<IdentityUser>>();
-            ApplicationDbContext dbContext = serviceProvider.GetRequiredService<ApplicationDbContext>();
+        IdentityResult createResult = await userManager.CreateAsync(identityUser, "P@ssw0rdMyTestUser");
+        Assert.IsTrue(createResult.Succeeded);
             
-            IdentityUser identityUser = new()
-            {
-                UserName = "MyTestUser",
-                Email = email
-            };
-            IdentityResult createResult = await userManager.CreateAsync(identityUser, correctPassword);
-            Assert.IsTrue(createResult.Succeeded);
+        await userManager.AddToRoleAsync(identityUser, "user");
             
-            await userManager.AddToRoleAsync(identityUser, "user");
-            
-            CloudbbUser user = new(identityUser);
-            dbContext.Add(user);
-            await dbContext.SaveChangesAsync(ct);
+        CloudbbUser user = new(identityUser);
+        dbContext.Add(user);
+        await dbContext.SaveChangesAsync(ct);
 
-            // Act
-            IActionResult result = await controller.LoginAsync(request, ct);
+        // Act
+        IActionResult result = await controller.LoginAsync(request, ct);
 
-            // Assert
-            Assert.IsNotNull(result);
-            UnauthorizedObjectResult unauthorized = Assert.IsInstanceOfType<UnauthorizedObjectResult>(result);
-            AuthResponse response = Assert.IsInstanceOfType<AuthResponse>(unauthorized.Value);
-            Assert.IsFalse(response.IsSuccess);
-            Assert.IsNull(response.Token);
-            Assert.IsNotNull(response.Message);
-            Assert.AreEqual("Invalid email or password", response.Message);
-        }, TestContext.CancellationToken);
-    }
+        // Assert
+        Assert.IsNotNull(result);
+        UnauthorizedObjectResult unauthorized = Assert.IsInstanceOfType<UnauthorizedObjectResult>(result);
+        AuthResponse response = Assert.IsInstanceOfType<AuthResponse>(unauthorized.Value);
+        Assert.IsFalse(response.IsSuccess);
+        Assert.IsNull(response.Token);
+        Assert.IsNotNull(response.Message);
+        Assert.AreEqual("Invalid email or password", response.Message);
+    }, TestContext.CancellationToken);
 
     [TestMethod]
-    public Task LoginAsync_WithInvalidModel_ShouldReturnBadRequestAsync()
+    public Task LoginAsync_WithInvalidModel_ShouldReturnBadRequestAsync() => UsingComponentAsync(new LoginRequest()
     {
-        // Arrange
-        LoginRequest request = new()
-        {
-            Email = "", // Invalid empty email
-            Password = "somepassword"
-        };
+        Email = "", // Invalid empty email
+        Password = "somepassword"
+    }, async (controller, request, serviceProvider, ct) =>
+    {
+        // Act
+        IActionResult result = await controller.LoginAsync(request, ct);
 
-        return UsingControllerAsync(request, async (controller, serviceProvider, ct) =>
-        {
-            // Act
-            IActionResult result = await controller.LoginAsync(request, ct);
-
-            // Assert
-            Assert.IsNotNull(result);
-            BadRequestObjectResult badRequest = Assert.IsInstanceOfType<BadRequestObjectResult>(result);
-            AuthResponse response = Assert.IsInstanceOfType<AuthResponse>(badRequest.Value);
-            Assert.IsFalse(response.IsSuccess);
-            Assert.IsNull(response.Token);
-            Assert.IsNotNull(response.Message);
-            Assert.AreEqual("Invalid request data", response.Message);
-        }, TestContext.CancellationToken);
-    }
+        // Assert
+        Assert.IsNotNull(result);
+        BadRequestObjectResult badRequest = Assert.IsInstanceOfType<BadRequestObjectResult>(result);
+        AuthResponse response = Assert.IsInstanceOfType<AuthResponse>(badRequest.Value);
+        Assert.IsFalse(response.IsSuccess);
+        Assert.IsNull(response.Token);
+        Assert.IsNotNull(response.Message);
+        Assert.AreEqual("Invalid request data", response.Message);
+    }, TestContext.CancellationToken);
 }

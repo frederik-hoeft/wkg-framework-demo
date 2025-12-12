@@ -4,7 +4,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Moq;
 using Wkg.AspNetCore.Configuration;
 using Wkg.AspNetCore.TestAdapters.Initialization;
 using Wkg.AspNetCore.TestAdapters.Initialization.Extensions;
@@ -36,6 +35,7 @@ public sealed class IntegrationTestDbInitializer : IAsyncDITestInitializer
     {
         ArgumentNullException.ThrowIfNull(serviceProvider);
         await using ApplicationDbContext context = serviceProvider.GetRequiredService<ApplicationDbContext>();
+        await context.Database.EnsureDeletedAsync(cancellationToken);
         await context.Database.MigrateAsync(cancellationToken);
         await serviceProvider.InitializeTestDatabaseAsync<IntegrationTestDbLoader>(cancellationToken);
     }

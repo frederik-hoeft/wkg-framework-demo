@@ -8,7 +8,7 @@
 	</PropertyGroup>
 	<ItemGroup>
 		<PackageReference Include="Moq" Version="4.20.72" />
-		<PackageReference Include="Wkg.AspNetCore.TestAdapters" Version="10.0.19015-rc" />
+		<PackageReference Include="Wkg.AspNetCore.TestAdapters" Version="10.0.19033-rc" />
 	</ItemGroup>
 	<ItemGroup>
 		<ProjectReference Include="..\Cloudbb.Web\Cloudbb.Web.csproj" />

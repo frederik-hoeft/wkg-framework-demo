@@ -9,17 +9,14 @@ public sealed class AuthController_LogoutTests : ControllerBaseTest<AuthControll
     public override TestContext TestContext { get; set; }
 
     [TestMethod]
-    public Task LogoutAsync_ShouldSucceedAsync()
+    public Task LogoutAsync_ShouldSucceedAsync() => UsingComponentAsync(async (controller, serviceProvider, ct) =>
     {
-        return UsingControllerAsync(async (controller, serviceProvider, ct) =>
-        {
-            // Act
-            IActionResult result = await controller.LogoutAsync(ct);
+        // Act
+        IActionResult result = await controller.LogoutAsync(ct);
 
-            // Assert
-            Assert.IsNotNull(result);
-            OkResult ok = Assert.IsInstanceOfType<OkResult>(result);
-            Assert.AreEqual(200, ok.StatusCode);
-        }, TestContext.CancellationToken);
-    }
+        // Assert
+        Assert.IsNotNull(result);
+        OkResult ok = Assert.IsInstanceOfType<OkResult>(result);
+        Assert.AreEqual(200, ok.StatusCode);
+    }, TestContext.CancellationToken);
 }
