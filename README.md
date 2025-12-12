@@ -1,22 +1,36 @@
 # Cloudbb .NET Service
 
-Cloudbb is an ASP.NET Core 10.0 Web API using PostgreSQL, ASP.NET Core Identity, and JWT auth. The project includes API versioning, grouped Swagger docs, EF Core migrations with auto-apply on startup, and strict code conventions for clarity and maintainability.
+Cloudbb is a feature-complete ASP.NET Core 10.0 forum Web API using PostgreSQL, ASP.NET Core Identity, and JWT authentication. The project provides full forum functionality including user authentication, post management, comment systems, and community voting features with comprehensive testing coverage.
 
 ## Overview
-- **Core app**: `source/Cloudbb/Cloudbb.Web` (`net10.0`, nullable enabled).
-- **Auth**: ASP.NET Core Identity + JWT (HMAC-SHA256 symmetric signing), global authorization.
-- **Data**: PostgreSQL via EF Core with explicit entity naming/mapping and model discovery.
-- **API Versioning**: `Asp.Versioning` with grouped Swagger in Development.
-- **Transactions**: `ReadCommitted` via `Wkg.AspNetCore.Transactions`.
+- **Core app**: `source/Cloudbb/Cloudbb.Web` (`net10.0`, nullable enabled)
+- **Auth**: ASP.NET Core Identity + JWT (ECDSA ES256 asymmetric signing), global authorization
+- **Data**: PostgreSQL via EF Core with explicit entity naming/mapping and model discovery
+- **API Versioning**: `Asp.Versioning` with grouped Swagger in Development  
+- **Transactions**: `ReadCommitted` via `Wkg.AspNetCore.Transactions`
+- **Testing**: Comprehensive unit and integration test suites using MSTest v4
+
+## Features
+- **User Authentication**: JWT-based registration, login with secure ECDSA signing
+- **Forum Posts**: Create, edit, delete posts with revision history and community voting
+- **Comment System**: Threaded comments on posts with voting and moderation
+- **Community Voting**: Upvote/downvote system for posts and comments
+- **User Management**: Role-based authorization (admin/user) with Identity integration
+- **API Documentation**: Comprehensive Swagger/OpenAPI docs with examples
 
 ## Project Structure
-- `source/Cloudbb/Cloudbb.Web`
+- `source/Cloudbb/Cloudbb.Web` - Main Web API project
     - `Api/V1/Controllers/`: versioned controllers split into `.api.cs` (routing/docs) and `.cs` (logic)
+        - `AuthController`: user registration, login, JWT token management
+        - `PostsController`: forum post CRUD operations, voting, retrieval with pagination
+        - `CommentsController`: comment creation, deletion, voting on posts
     - `Configuration/Swagger/`: Swagger configuration and filters
-    - `Configuration/Versions.cs`: API version constants
-    - `Data/`: DbContext, model loader, entities, seeds, migrations
-    - `Services/Auth/`: JWT and auth-related services
-    - `Extensions/`: helpers (e.g., path utilities)
+    - `Data/`: DbContext, model loader, entities (posts, comments, votes, users), migrations
+    - `Services/Auth/`: JWT services with ECDSA key management and claim handling
+- `source/Cloudbb/Cloudbb.Web.Tests` - Unit tests (MSTest v4)
+    - `Services/Auth/`: JWT service, key import, algorithm provider tests
+- `source/Cloudbb/Cloudbb.Web.Tests.Integration` - Integration tests
+    - `Api/V1/Auth/`, `Api/V1/Posts/`, `Api/V1/Comments/`: comprehensive controller testing
 
 ## Conventions
 See `code-style.md`. Highlights:
@@ -27,23 +41,37 @@ See `code-style.md`. Highlights:
 ## Configuration
 Set these in `appsettings.json` or environment variables:
 - `DatabaseConnection`: PostgreSQL connection string
-- `Auth:Jwt:Issuer`, `Auth:Jwt:Audience`, `Auth:Jwt:Key`, `Auth:Jwt:TimeToLive`
+- `Auth:Jwt:Issuer`, `Auth:Jwt:Audience`: JWT issuer and audience validation
+- `Auth:Jwt:ClockSkew`: token validation clock skew (e.g., "00:00:00" for zero skew)
+- `Auth:Jwt:TimeToLive`: token expiration time
+- `Auth:Jwt:ECDsaKeyPath`: path to ECDSA private key PEM file for JWT signing
 
 Swagger XML comments are loaded from `Cloudbb.Web.xml` and enabled in Development.
 
 ## Authentication
-JWT is configured in `Program.cs` (`JwtBearerDefaults`) with zero clock skew. Services:
-- `IJwtAlgorithmProvider` → `JwtHmacSha256AlgorithmProvider`
-- `IJwtSigningKeyProvider` → `JwtSymmetricSigningKeyProvider`
-- `IJwtService` → `JwtService`
+JWT is configured in `Startup.cs` (`JwtBearerDefaults`) with configurable clock skew. Services:
+- `IJwtAlgorithmProvider` → `JwtEcdsaSha256AlgorithmProvider` (ES256 algorithm)
+- `IJwtECDsaSigningKeyImportService` → `JwtECDsaPemFileSigningKeyImportService` (PEM key loading)
+- `IJwtSigningKeyProvider` → `JwtECDsaSigningKeyProvider` (ECDSA key management)
+- `IJwtService` → `JwtService` (token generation and validation)
+- `IUserClaimIndex` → `UserClaimIndex` (user claim management)
+- `ITimingRandomizationService` → `CsprngTimingRandomizationService` (security timing)
 
 Tokens include claims for `NameIdentifier`, `Name`, `Email`, `Role`, `Jti`, `Iat`. TTL from `Auth:Jwt:TimeToLive`.
 
+**Security**: Uses ECDSA ES256 asymmetric signing with PEM-format private keys for enhanced security over symmetric HMAC approaches.
+
 ## Data & Migrations
-- `ApplicationDbContext` extends `IdentityDbContext<IdentityUser>` and enforces explicit entity/property mapping policies.
-- Entities live in `Data/Model/` and typically extend `CloudbbEntity` (connection entities can implement `ICloudbbConnectionEntity`).
-- Migrations live in `Data/Migrations` and auto-apply at startup via `Database.MigrateAsync()`.
-- Seeded roles: `admin`, `user` via `Data/Seeds/IdentityRoleDataSeed.cs`.
+- `CloudbbDbContext` extends `IdentityDbContext<IdentityUser>` and enforces explicit entity/property mapping policies
+- **Core Entities** in `Data/Model/`:
+    - `CloudbbUser`: extends `CloudbbEntity`, bridges Identity system with forum features
+    - `CloudbbPost`: forum posts with `CloudbbPostRevision` for edit history
+    - `CloudbbComment`: threaded comments on posts
+    - `CloudbbPostVote`/`CloudbbCommentVote`: community voting system (+1/-1/0)
+- All entities extend `CloudbbEntity` (connection entities implement `ICloudbbConnectionEntity`)
+- Migrations live in `Data/Migrations` and auto-apply at startup via `Database.MigrateAsync()`
+- Seeded roles: `admin`, `user` via `Data/Seeds/IdentityRoleDataSeed.cs`
+- **Custom migration helper**: `./add-migration.sh MigrationName` validates PascalCase and outputs to `Data/Migrations`
 
 ## API Versioning & Swagger
 - Default API version is v1.0 with URL substitution (`api/v{version}/...`).
@@ -51,7 +79,7 @@ Tokens include claims for `NameIdentifier`, `Name`, `Email`, `Role`, `Jti`, `Iat
 - Development-only Swagger UI exposes per-version endpoints and Bearer auth.
 
 ## Build & Run
-Use the following commands from the repo root (Windows bash):
+Use the following commands from the repo root:
 
 ```bash
 # Build solution
@@ -59,23 +87,43 @@ dotnet build source/Cloudbb/Cloudbb.slnx
 
 # Run the Web API
 dotnet run --project source/Cloudbb/Cloudbb.Web
+
+# Run unit tests
+dotnet test source/Cloudbb/Cloudbb.Web.Tests
+
+# Run integration tests
+dotnet test source/Cloudbb/Cloudbb.Web.Tests.Integration
+
+# Run all tests
+dotnet test source/Cloudbb/Cloudbb.slnx
 ```
 
 Database migrations:
 
 ```bash
 # From source/Cloudbb/Cloudbb.Web/
-dotnet ef migrations add MigrationName
+./add-migration.sh MigrationName  # Validates PascalCase, outputs to Data/Migrations
 dotnet ef database update
-
-# Preferred helper (validates PascalCase name, writes to Data/Migrations)
-bash source/Cloudbb/Cloudbb.Web/add-migration.sh AddMyEntity
 ```
 
+## Testing
+Comprehensive test coverage using **MSTest v4**:
+
+- **Unit Tests** (`Cloudbb.Web.Tests`): JWT services, authentication, algorithm providers
+- **Integration Tests** (`Cloudbb.Web.Tests.Integration`): Full API testing with PostgreSQL
+    - Transactional test isolation with automatic rollback
+    - Complete controller coverage: Auth, Posts, Comments
+    - Authentication scenarios, CRUD operations, voting, error handling
+    - Static test data via `IntegrationTestDbLoader` for consistent testing
+
+**Test Execution**: All tests use PostgreSQL test database with automatic transaction management.
+
 ## Adding Features
-- **Controllers**: place under `Api/V1/Controllers/`, split into `.api.cs` and `.cs`, secure with `[Authorize]` where required.
-- **Models**: add to `Data/Model/` and ensure they meet mapping/inheritance policies; include in `ApplicationModelLoader` discovery as needed.
-- **Services**: add under `Services/` and register in `Program.cs` with explicit lifetimes (`AddSingleton`/`AddScoped`).
+- **Controllers**: place under `Api/V1/Controllers/`, split into `.api.cs` (routes/docs) and `.cs` (logic), secure with `[Authorize]`
+- **Models**: add to `Data/Model/`, extend `CloudbbEntity`, ensure explicit mapping policies in `CloudbbModelLoader`
+- **Services**: add under `Services/` and register in `Startup.cs` with explicit lifetimes (`AddSingleton`/`AddScoped`)
+- **Tests**: add unit tests to `Cloudbb.Web.Tests` and integration tests to `Cloudbb.Web.Tests.Integration`
+- **API Models**: request/response models in `Api/V1/Models/` with data annotations and XML documentation
 
 ## Development Notes
 - API versioning group format is `'v'VVV`.
