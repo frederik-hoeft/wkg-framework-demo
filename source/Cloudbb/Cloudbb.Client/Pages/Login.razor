@@ -1,5 +1,4 @@
 @page "/login"
-@using Cloudbb.Client.Services.Auth
 @inject IAuthService AuthService
 @inject NavigationManager Navigation
 @inject ISnackbar Snackbar
@@ -13,13 +12,12 @@
         <EditForm Model="@loginRequest" OnValidSubmit="@HandleLogin">
             <DataAnnotationsValidator />
             
-            <MudTextField @bind-Value="loginRequest.Email"
-                          Label="Email"
+            <MudTextField @bind-Value="loginRequest.Username"
+                          Label="Username"
                           Variant="Variant.Outlined"
                           FullWidth="true"
                           Margin="Margin.Normal"
-                          InputType="InputType.Email"
-                          For="@(() => loginRequest.Email)" />
+                          For="@(() => loginRequest.Username)" />
 
             <MudTextField @bind-Value="loginRequest.Password"
                           Label="Password"
