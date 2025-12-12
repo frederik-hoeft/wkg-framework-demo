@@ -37,19 +37,7 @@ public sealed partial class CommentsController(ITransactionServiceHandle transac
         };
         dbContext.Add(comment);
         await dbContext.SaveChangesAsync(ct);
-        // no need to re-fetch from the database since we have all the info we need
-        CommentResponseEntry result = new
-        (
-            comment.Id,
-            comment.PostId,
-            comment.UserId,
-            comment.Content,
-            UserClaims.GetUsername(),
-            VoteScore: 0,
-            UserVote: VoteType.NoVote,
-            CanEdit: true,
-            comment.CreationTime
-        );
+        CommentCreationResponse result = new(comment.Id);
         return transaction.Commit(Ok(result));
     }, cancellationToken);
 
@@ -100,10 +88,10 @@ public sealed partial class CommentsController(ITransactionServiceHandle transac
             .Where(c => c.Id == comment.Id)
             .Select(c => new CommentVoteResponse
             (
-                c.Id,
-                // recalculate post score
+                c.PostId,
+                // recalculate comment score
                 c.Votes.Select(vote => vote.Value).Sum(),
-                // user's vote on this post (+1,-1), or None (0) if the user hasn't voted
+                // user's vote on this comment (+1,-1), or None (0) if the user hasn't voted
                 (VoteType)c.Votes
                     .Where(vote => vote.UserId == userId)
                     .Select(vote => vote.Value)

@@ -24,13 +24,13 @@ public partial class CommentsController
     /// </summary>
     /// <param name="request">Comment creation data including target post ID and comment content text.</param>
     /// <param name="cancellationToken">Cancellation token for request handling and database operations.</param>
-    /// <returns>Created comment details including unique identifier and creation timestamp.</returns>
+    /// <returns>The identifier of the newly created comment.</returns>
     /// <response code="200">Comment successfully created and saved to the database.</response>
     /// <response code="400">Invalid request data such as missing content or invalid post reference.</response>
     /// <response code="401">User is not authenticated or authentication token is invalid.</response>
     /// <response code="404">Target post does not exist or has been deleted.</response>
     [HttpPost("create")]
-    [ProducesResponseType<CommentResponseEntry>(StatusCodes.Status200OK)]
+    [ProducesResponseType<CommentCreationResponse>(StatusCodes.Status200OK)]
     public partial Task<IActionResult> CreateCommentAsync([FromBody] CommentCreationRequest request, CancellationToken cancellationToken);
 
     /// <summary>
@@ -40,7 +40,6 @@ public partial class CommentsController
     /// </summary>
     /// <param name="request">Comment deletion request containing the unique identifier of the comment to remove.</param>
     /// <param name="cancellationToken">Cancellation token for request handling and database operations.</param>
-    /// <returns>Confirmation of successful deletion or appropriate error response.</returns>
     /// <response code="200">Comment successfully deleted and removed from the database.</response>
     /// <response code="400">Invalid request data or malformed comment identifier.</response>
     /// <response code="401">User is not authenticated or authentication token is invalid.</response>

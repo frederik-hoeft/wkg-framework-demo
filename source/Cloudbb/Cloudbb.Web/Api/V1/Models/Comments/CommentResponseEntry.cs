@@ -11,7 +11,7 @@
 /// <param name="Username">Display name of the comment author.</param>
 /// <param name="VoteScore">Aggregate vote score for comment quality ranking.</param>
 /// <param name="UserVote">Current authenticated user's vote state on this comment.</param>
-/// <param name="CanEdit">Whether the authenticated user has permission to edit this comment.</param>
+/// <param name="CanEdit">Whether the authenticated user has permission to edit this comment. If false, edit options should be hidden and voting be enabled (cannot vote on own post).</param>
 /// <param name="CreationTime">Timestamp when the comment was originally posted.</param>
 public sealed record CommentResponseEntry
 (

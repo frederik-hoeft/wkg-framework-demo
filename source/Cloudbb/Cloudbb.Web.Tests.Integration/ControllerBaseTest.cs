@@ -16,7 +16,8 @@ public abstract class ControllerBaseTest<TController> : TransactionalControllerT
 {
     public abstract TestContext TestContext { get; set; }
 
-    private protected static async ValueTask SetAuthenticatedUserContextAsync(PostsController controller, IServiceProvider serviceProvides, TestUser testUser, CancellationToken cancellationToken)
+    private protected static async ValueTask SetAuthenticatedUserContextAsync<TControllerType>(TControllerType controller, IServiceProvider serviceProvides, TestUser testUser, CancellationToken cancellationToken)
+        where TControllerType : DatabaseController<CloudbbDbContext>
     {
         IJwtService jwt = serviceProvides.GetRequiredService<IJwtService>();
         ITransactionService<CloudbbDbContext> transaction = serviceProvides.GetRequiredService<ITransactionService<CloudbbDbContext>>();

@@ -20,6 +20,10 @@ public sealed class IntegrationTestDbLoader : AsyncTestDatabaseLoader<Integratio
 
     public static Guid PostOfUser2Id { get; } = Guid.CreateVersion7();
 
+    public static Guid Comment1OnPost1Id { get; } = Guid.CreateVersion7();
+
+    public static Guid Comment2OnPost1Id { get; } = Guid.CreateVersion7();
+
     public async ValueTask InitializeDatabaseAsync(CloudbbDbContext dbContext, IServiceProvider serviceProvider, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(dbContext);
@@ -124,6 +128,7 @@ public sealed class IntegrationTestDbLoader : AsyncTestDatabaseLoader<Integratio
         // Add comments to posts
         CloudbbComment comment1 = new()
         {
+            Id = Comment1OnPost1Id,
             PostId = post1.Id,
             UserId = user2.Id,
             Content = "Great post! Thanks for sharing.",
@@ -133,18 +138,13 @@ public sealed class IntegrationTestDbLoader : AsyncTestDatabaseLoader<Integratio
         
         CloudbbComment comment2 = new()
         {
+            Id = Comment2OnPost1Id,
             PostId = post1.Id, 
             UserId = user.Id,
             Content = "Thanks for the feedback!",
             CreationTime = now.AddDays(-3)
         };
         dbContext.Add(comment2);
-
-        await dbContext.SaveChangesAsync(cancellationToken);
-
-        // Add votes to comments
-        dbContext.Add(new CloudbbCommentVote { CommentId = comment1.Id, UserId = user.Id, Value = 1 }); // user1 upvotes comment1
-
         await dbContext.SaveChangesAsync(cancellationToken);
     }
 }
