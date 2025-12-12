@@ -17,7 +17,7 @@ namespace Cloudbb.Web.Data;
 /// </summary>
 /// <param name="options">Database context configuration options.</param>
 /// <param name="modelLoader">Service for discovering and loading entity configurations.</param>
-public sealed class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options, IModelLoader modelLoader) : IdentityDbContext<IdentityUser>(options)
+public sealed class CloudbbDbContext(DbContextOptions<CloudbbDbContext> options, IModelLoader modelLoader) : IdentityDbContext<IdentityUser>(options)
 {
     /// <summary>
     /// Configures the database model with strict policies for entity naming, property mapping,

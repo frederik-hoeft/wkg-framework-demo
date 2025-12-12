@@ -29,5 +29,5 @@ public sealed record PostReadResponse
     DateTime LastModified,
     int Revisions,
     bool CanEdit,
-    ICollection<CommentListResponseEntry>? Comments
+    ICollection<CommentResponseEntry>? Comments
 );

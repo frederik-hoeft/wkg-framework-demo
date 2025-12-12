@@ -3,7 +3,6 @@ using Cloudbb.Web.Data;
 using Cloudbb.Web.Data.Model;
 using Cloudbb.Web.Services.Auth;
 using Cloudbb.Web.Services.Auth.Policies;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -23,7 +22,7 @@ public sealed partial class AuthController(
     IConfiguration configuration,
     ITimingRandomizationService timingRandomizationService,
     ITransactionServiceHandle transactionServiceHandle
-) : DatabaseController<ApplicationDbContext>(transactionServiceHandle)
+) : DatabaseController<CloudbbDbContext>(transactionServiceHandle)
 {
     public partial Task<IActionResult> RegisterAsync(RegisterRequest request, CancellationToken cancellationToken) => Transaction.Scoped.RunAsync(async (dbContext, transaction, ct) =>
     {

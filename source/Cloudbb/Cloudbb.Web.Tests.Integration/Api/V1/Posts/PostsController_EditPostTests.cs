@@ -39,7 +39,7 @@ public sealed class PostsController_EditPostTests : ControllerBaseTest<PostsCont
         Assert.AreEqual(IntegrationTestDbLoader.Post1OfUser1Id, response.PostId);
 
         // Verify new revision was created
-        ApplicationDbContext dbContextCheck = serviceProvider.GetRequiredService<ApplicationDbContext>();
+        CloudbbDbContext dbContextCheck = serviceProvider.GetRequiredService<CloudbbDbContext>();
         CloudbbPost? updatedPost = await dbContextCheck.Set<CloudbbPost>()
             .Include(p => p.Revisions)
             .FirstOrDefaultAsync(p => p.Id == IntegrationTestDbLoader.Post1OfUser1Id, ct1);

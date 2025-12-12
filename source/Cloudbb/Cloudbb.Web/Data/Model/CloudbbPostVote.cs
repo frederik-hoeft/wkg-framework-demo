@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using Cloudbb.Web.Api.V1.Models;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using Wkg.EntityFrameworkCore.Configuration;
 
@@ -9,7 +10,7 @@ namespace Cloudbb.Web.Data.Model;
 /// Used for calculating post scores and enabling community-driven content ranking.
 /// Each user can have at most one vote per post.
 /// </summary>
-public sealed class CloudbbPostVote() : CloudbbVote, IDiscoverableModelConfiguration<CloudbbPostVote>
+public sealed partial class CloudbbPostVote() : CloudbbVote, IDiscoverableModelConfiguration<CloudbbPostVote>
 {
     /// <summary>
     /// Foreign key referencing the post being voted on.

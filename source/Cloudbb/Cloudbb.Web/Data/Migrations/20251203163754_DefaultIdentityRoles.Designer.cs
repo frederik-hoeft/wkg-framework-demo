@@ -11,7 +11,7 @@ using System;
 
 namespace Cloudbb.Web.Data.Migrations
 {
-    [DbContext(typeof(ApplicationDbContext))]
+    [DbContext(typeof(CloudbbDbContext))]
     [Migration("20251203163754_DefaultIdentityRoles")]
     partial class DefaultIdentityRoles
     {

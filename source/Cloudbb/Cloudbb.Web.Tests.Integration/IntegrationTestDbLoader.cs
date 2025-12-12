@@ -8,7 +8,7 @@ using Wkg.AspNetCore.TestAdapters.Initialization;
 
 namespace Cloudbb.Web.Tests.Integration;
 
-public sealed class IntegrationTestDbLoader : AsyncTestDatabaseLoader<IntegrationTestDbLoader, ApplicationDbContext>, IAsyncTestDatabaseLoader<ApplicationDbContext>
+public sealed class IntegrationTestDbLoader : AsyncTestDatabaseLoader<IntegrationTestDbLoader, CloudbbDbContext>, IAsyncTestDatabaseLoader<CloudbbDbContext>
 {
     internal static TestUser TestUser1 { get; } = TestUser.Create("GlobalTestUser1", "global-test-user1@example.com", "P@ssw0rdGlobalTestUser1", AuthPolicies.User.Roles);
 
@@ -20,7 +20,7 @@ public sealed class IntegrationTestDbLoader : AsyncTestDatabaseLoader<Integratio
 
     public static Guid PostOfUser2Id { get; } = Guid.CreateVersion7();
 
-    public async ValueTask InitializeDatabaseAsync(ApplicationDbContext dbContext, IServiceProvider serviceProvider, CancellationToken cancellationToken)
+    public async ValueTask InitializeDatabaseAsync(CloudbbDbContext dbContext, IServiceProvider serviceProvider, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(dbContext);
         ArgumentNullException.ThrowIfNull(serviceProvider);

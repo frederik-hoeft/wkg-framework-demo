@@ -39,7 +39,7 @@ public sealed class PostsController_CreatePostTests : ControllerBaseTest<PostsCo
         Assert.AreNotEqual(Guid.Empty, response.PostId);
 
         // Verify post was created in database
-        ApplicationDbContext dbContext = serviceProvider.GetRequiredService<ApplicationDbContext>();
+        CloudbbDbContext dbContext = serviceProvider.GetRequiredService<CloudbbDbContext>();
         CloudbbPost? createdPost = await dbContext.Set<CloudbbPost>()
             .Include(p => p.Revisions)
             .Include(p => p.User.IdentityUser)
@@ -137,7 +137,7 @@ public sealed class PostsController_CreatePostTests : ControllerBaseTest<PostsCo
         Assert.AreNotEqual(Guid.Empty, response.PostId);
 
         // Verify content was saved correctly
-        ApplicationDbContext dbContext = serviceProvider.GetRequiredService<ApplicationDbContext>();
+        CloudbbDbContext dbContext = serviceProvider.GetRequiredService<CloudbbDbContext>();
         CloudbbPost? createdPost = await dbContext.Set<CloudbbPost>()
             .Include(p => p.Revisions)
             .FirstOrDefaultAsync(p => p.Id == response.PostId, ct);

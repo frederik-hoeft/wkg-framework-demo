@@ -1,14 +1,12 @@
+using Cloudbb.Web.Api.V1.Extensions;
 using Cloudbb.Web.Api.V1.Models;
 using Cloudbb.Web.Api.V1.Models.Comments;
 using Cloudbb.Web.Api.V1.Models.Posts;
-using Cloudbb.Web.Data;
 using Cloudbb.Web.Data.Model;
 using Cloudbb.Web.Services.Auth;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Data;
-using System.Diagnostics.CodeAnalysis;
-using Wkg.AspNetCore.Abstractions.Controllers;
 using Wkg.AspNetCore.Transactions;
 
 namespace Cloudbb.Web.Api.V1.Controllers;
@@ -16,11 +14,8 @@ namespace Cloudbb.Web.Api.V1.Controllers;
 /// <summary>
 /// Provides endpoints for managing posts.
 /// </summary>
-public sealed partial class PostsController
-(
-    ITransactionServiceHandle transactionService,
-    IUserClaimIndex userClaims
-) : DatabaseController<ApplicationDbContext>(transactionService)
+public sealed partial class PostsController(ITransactionServiceHandle transactionService, IUserClaimIndex userClaims) 
+    : CloudbbControllerBase(transactionService, userClaims)
 {
     public partial Task<IActionResult> GetPostsAsync(PostListRequest request, CancellationToken cancellationToken) => Transaction.Scoped.RunReadOnlyAsync<IActionResult>(async (dbContext, ct) =>
     {
@@ -114,11 +109,12 @@ public sealed partial class PostsController
                 // user can edit if they are the author of the post
                 postInfo.Post.UserId == userId,
                 request.IncludeComments
-                    ? postInfo.Post.Comments.Select(comment => new CommentListResponseEntry
+                    ? postInfo.Post.Comments.Select(comment => new CommentResponseEntry
                     (
                         comment.Id,
                         comment.PostId,
                         comment.UserId,
+                        comment.Content,
                         comment.User.Username,
                         // comment score is the sum of all vote values (+1 for upvote, -1 for downvote)
                         comment.Votes.Select(vote => vote.Value).Sum(),
@@ -127,7 +123,8 @@ public sealed partial class PostsController
                             .Where(vote => vote.UserId == userId)
                             .Select(vote => vote.Value)
                             .FirstOrDefault(),
-                        comment.Content,
+                        // user can edit if they are the author of the comment
+                        comment.UserId == userId,
                         // convert database UTC time to provided timezone
                         TimeZoneInfo.ConvertTimeFromUtc(comment.CreationTime, tzinfo)
                     )).ToList()
@@ -226,31 +223,7 @@ public sealed partial class PostsController
             // users cannot vote on their own posts
             return transaction.Rollback(Forbid());
         }
-        if (post.Votes is [var existingVote, ..])
-        {
-            // update existing vote
-            if (request.VoteType == VoteType.NoVote)
-            {
-                // remove vote
-                dbContext.Remove(existingVote);
-            }
-            else
-            {
-                existingVote.Value = (int)request.VoteType;
-                dbContext.Update(existingVote);
-            }
-        }
-        else
-        {
-            // create new vote
-            CloudbbPostVote newVote = new()
-            {
-                PostId = post.Id,
-                UserId = userId,
-                Value = (int)request.VoteType
-            };
-            dbContext.Add(newVote);
-        }
+        post.CastVote(dbContext, userId, request.VoteType);
         await dbContext.SaveChangesAsync(ct);
         // just fully refresh from database as a source of ground truth
         PostVoteResponse? response = await dbContext.Set<CloudbbPost>().AsNoTracking()
@@ -274,27 +247,4 @@ public sealed partial class PostsController
         }
         return transaction.Commit(Ok(response));
     }, cancellationToken);
-
-    private bool TryValidateContext<TRequest>([NotNullWhen(true)] TRequest? request, [NotNullWhen(false)] out IActionResult? errorResult, out Guid userId)
-    {
-        errorResult = null;
-        userId = Guid.Empty;
-        if (request is null)
-        {
-            errorResult = BadRequest("Request body cannot be null");
-            return false;
-        }
-        if (!ModelState.IsValid)
-        {
-            errorResult = BadRequest(ModelState);
-            return false;
-        }
-        if (!userClaims.TryGetUserId(out userId))
-        {
-            // honestly, should never happen. the auth middleware should catch this
-            errorResult = Unauthorized();
-            return false;
-        }
-        return true;
-    }
 }
