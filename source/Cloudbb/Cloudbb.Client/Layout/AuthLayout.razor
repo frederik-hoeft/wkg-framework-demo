@@ -1,0 +1,17 @@
+@inherits LayoutComponentBase
+@namespace Cloudbb.Client.Layout
+
+<div class="mud-layout">
+    <MudContainer MaxWidth="MaxWidth.Small" Class="pa-4">
+        <div class="d-flex flex-column align-center">
+            <MudPaper Class="pa-8 ma-2" MinHeight="400px" Width="100%">
+                <div class="d-flex flex-column align-center">
+                    <MudText Typo="Typo.h3" Color="Color.Primary" Class="mb-6">
+                        Cloudbb Forum
+                    </MudText>
+                    @Body
+                </div>
+            </MudPaper>
+        </div>
+    </MudContainer>
+</div>

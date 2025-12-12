@@ -1,8 +1,9 @@
-<Solution>
+﻿<Solution>
   <Folder Name="/Solution Items/">
     <File Path=".editorconfig" />
     <File Path="Directory.Build.props" />
   </Folder>
+  <Project Path="Cloudbb.Client/Cloudbb.Client.csproj" />
   <Project Path="Cloudbb.Web.Aot/Cloudbb.Web.Aot.csproj" Id="7fd5aa5e-e723-449f-aaad-645f03a5d8b4" />
   <Project Path="Cloudbb.Web.Tests.Integration/Cloudbb.Web.Tests.Integration.csproj" Id="0aff05af-98c1-4564-8914-db48f97b392e" />
   <Project Path="Cloudbb.Web.Tests/Cloudbb.Web.Tests.csproj" Id="18c232c3-9828-4854-9416-08bccbacd6cd" />
