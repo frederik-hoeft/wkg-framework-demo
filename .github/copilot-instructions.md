@@ -154,7 +154,7 @@ public sealed class ServiceNameTests
 
 ### Integration Test Patterns
 
-**CRITICAL**: Integration tests use `Wkg.AspNetCore.TestAdapters` which provides automatic transaction rollback for each test scope, regardless of whether tested services attempt to commit transactions.
+**CRITICAL**: Integration tests use `Wkg.AspNetCore.TestAdapters` which provides automatic transaction rollback for each test scope, regardless of whether tested services attempt to commit transactions through Wkg.AspNetCore.
 
 #### Controller Integration Tests
 
@@ -167,38 +167,84 @@ public sealed class ControllerName_ActionTests : ControllerBaseTest<ControllerNa
     public override TestContext TestContext { get; set; }
 
     [TestMethod]
-    public Task ActionAsync_WithCondition_ExpectedBehaviorAsync()
+    // Passing the request through UsingComponentAsync enables automatic model validation for the request object.
+    // (sets up ModelState for the subsequent controller action call)
+    public Task ActionAsync_WithCondition_ExpectedBehaviorAsync() => UsingComponentAsync(new RequestType()
     {
-        // Arrange
-        RequestType request = new()
-        {
-            Property = "SomeValue"
-        };
-        // performs model validation with the request, creates a service scope and controller instance
-        return UsingControllerAsync(request, async (controller, serviceProvider, ct) =>
-        {
-            // Act
-            IActionResult result = await controller.ActionAsync(request, ct);
+        Property = "TestValue"
+    }, async (controller, request, serviceProvider, ct) =>
+    {
+        // Act
+        IActionResult result = await controller.ActionAsync(request, ct);
 
-            // Assert
-            Assert.IsNotNull(result);
-            OkObjectResult ok = Assert.IsInstanceOfType<OkObjectResult>(result);
-            ResponseType response = Assert.IsInstanceOfType<ResponseType>(ok.Value);
-            // Additional assertions...
-        }, TestContext.CancellationToken);
-    }
+        // Assert
+        Assert.IsNotNull(result);
+        OkObjectResult ok = Assert.IsInstanceOfType<OkObjectResult>(result);
+        ResponseType response = Assert.IsInstanceOfType<ResponseType>(ok.Value);
+        // Additional assertions...
+    }, TestContext.CancellationToken);
 }
+```
+
+#### Advanced Integration Test Patterns
+
+**Multi-step transactions** use `UsingTransactionAsync` for operations spanning multiple component calls. The transaction is bound to the test scope and spans across multiple `UsingComponentAsync` calls. Any changes are rolled back at the end of the test.
+
+```csharp
+[TestMethod]
+public Task ComplexFlow_WithMultipleOperations_ShouldWorkAsync() => UsingTransactionAsync(async (dbContext, ct) =>
+{
+    // Arrange initial data state with the dbContext if needed
+    // dbContext.Add(...);
+    await dbContext.SaveChangesAsync(ct);
+
+    // optional: call into UsingServiceProviderAsync() to set up any additional data if dbContext is not sufficient.
+    // note: the serviceProvider here shares the same transaction scope as the dbContext (from the transaction)
+    // UsingTransactionAsync internally also uses UsingServiceProviderAsync to provide the serviceProvider. Nested calls share the same scope.
+    await UsingServiceProviderAsync(async (serviceProvider, ct1) =>
+    {
+        // e.g. get UserManager to create users
+        UserManager<ApplicationDbContext> userManager = serviceProvider.GetRequiredService<UserManager<ApplicationDbContext>>();
+        // ... set up data ...
+    }, ct);
+
+    // First operation
+    await UsingComponentAsync(new FirstRequest(), async (controller, request, ct1) =>
+    {
+        IActionResult result = await controller.FirstActionAsync(request, ct1);
+        Assert.IsInstanceOfType<OkObjectResult>(result);
+    }, ct);
+
+    // Second operation in same transaction, but with a new controller instance (to simulate separate API call)
+    await UsingComponentAsync(new SecondRequest(), async (controller, request, ct1) =>
+    {
+        IActionResult result = await controller.SecondActionAsync(request, ct1);
+        Assert.IsInstanceOfType<OkObjectResult>(result);
+    }, ct);
+}, TestContext.CancellationToken);
+```
+
+**Component tests without request objects** for simple operations:
+
+```csharp
+// could also obviously be combined with more complex setup through UsingTransactionAsync as above
+[TestMethod]
+public Task SimpleOperation_ShouldWork() => UsingComponentAsync(async (controller, serviceProvider, ct) =>
+{
+    IActionResult result = await controller.SimpleActionAsync(ct);
+    Assert.IsInstanceOfType<OkResult>(result);
+}, TestContext.CancellationToken);
 ```
 
 #### Key Integration Test Guidelines
 
 - **Inherit from**: `ControllerBaseTest<TController>` for API controllers, `ComponentIntegrationTest<TComponent>` for services
 - **File naming**: `ControllerName_ActionTests.cs` for controller actions
-- **Test data**: Either inline (will be rolled back) or via `IntegrationTestDbLoader` for global pre-seeded data
+- **Test data**: Use `IntegrationTestDbLoader` for global pre-seeded data, inline data for test-specific needs
 - **Async pattern**: Always return `Task` from test methods, use `TestContext.CancellationToken`
 - **Database isolation**: Each test runs in its own transaction scope that auto-rolls back
 - **Service access**: Use `serviceProvider.GetRequiredService<T>()` to access registered services
-- **Validation**: Use `UsingControllerAsync(request, ...)` to enable model validation
+- **Validation**: Use `UsingComponentAsync(request, ...)` to enable automatic model validation
 
 ## EF Core Patterns
 
