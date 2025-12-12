@@ -1,10 +1,14 @@
 ﻿using Cloudbb.Web.Data;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Wkg.AspNetCore.Configuration;
+using Wkg.AspNetCore.Delegates;
+using Wkg.AspNetCore.ErrorHandling;
+using Wkg.AspNetCore.Exceptions;
 using Wkg.AspNetCore.TestAdapters.Initialization;
 using Wkg.AspNetCore.TestAdapters.Initialization.Extensions;
 
@@ -29,6 +33,7 @@ public sealed class IntegrationTestDbInitializer : IAsyncDITestInitializer
                 RequestServices = serviceProvider
             }
         });
+        services.AddSingleton<IErrorSentry, NoopErrorSentry>();
     }
 
     public static async ValueTask InitializeAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
@@ -38,5 +43,22 @@ public sealed class IntegrationTestDbInitializer : IAsyncDITestInitializer
         await context.Database.EnsureDeletedAsync(cancellationToken);
         await context.Database.MigrateAsync(cancellationToken);
         await serviceProvider.InitializeTestDatabaseAsync<IntegrationTestDbLoader>(cancellationToken);
+    }
+
+    private sealed class NoopErrorSentry : IErrorSentry
+    {
+        public ApiProxyException AfterHandled(Exception e) => throw e;
+
+        public IActionResult Watch(RequestAction<IActionResult> action) => action();
+
+        public void Watch(RequestAction action) => action();
+
+        public TResult Watch<TResult>(RequestAction<TResult> action) => action();
+
+        public Task<IActionResult> WatchAsync(RequestTask<IActionResult> task) => task();
+
+        public Task WatchAsync(RequestTask task) => task();
+
+        public Task<TResult> WatchAsync<TResult>(RequestTask<TResult> task) => task();
     }
 }

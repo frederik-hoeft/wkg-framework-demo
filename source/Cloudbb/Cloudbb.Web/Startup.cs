@@ -4,6 +4,7 @@ using Cloudbb.Web.Configuration.Swagger;
 using Cloudbb.Web.Data;
 using Cloudbb.Web.Services.Auth;
 using Cloudbb.Web.Services.Auth.Default;
+using Cloudbb.Web.Services.Auth.Policies;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -73,7 +74,10 @@ internal sealed class Startup : IAsyncStartupScript
             };
         });
 
-        services.AddAuthorization();
+        services.AddAuthorizationBuilder()
+            .AddPolicy(AuthPolicies.User.Name, policy => policy.RequireRole(AuthPolicies.User.Roles))
+            .AddPolicy(AuthPolicies.Admin.Name, policy => policy.RequireRole(AuthPolicies.Admin.Roles));
+
         services.AddHttpContextAccessor();
 
         services.AddTransactionManagement<ApplicationDbContext>(transactionOptions => transactionOptions

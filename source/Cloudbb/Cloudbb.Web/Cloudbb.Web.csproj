@@ -29,12 +29,10 @@
         <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.0" />
         <PackageReference Include="Wkg" Version="10.0.19028-rc" />
         <PackageReference Include="Wkg.AspNetCore" Version="10.0.19033-rc" />
-        <PackageReference Include="Wkg.EntityFrameworkCore" Version="10.0.19029-rc" />
-        <!-- TODO: replace with Wkg.EntityFrameworkCore.Discovery.SourceGeneration once it has cleared internal review -->
-        <!-- TODO: (unofficial preview package) remove once official package is available -->
-		<PackageReference Include="019af44d1e9c73358e4519cf0d08516d" Version="10.0.18980">
-			<PrivateAssets>all</PrivateAssets>
-			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+        <PackageReference Include="Wkg.EntityFrameworkCore" Version="10.0.19037-rc" />
+		<PackageReference Include="Wkg.EntityFrameworkCore.Discovery.SourceGeneration" Version="10.0.19037-rc">
+		  <PrivateAssets>all</PrivateAssets>
+		  <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
     </ItemGroup>
 </Project>

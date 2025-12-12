@@ -34,8 +34,9 @@ public sealed partial class PostsController
             .Select(post => new
             {
                 Post = post,
-                // invariant: posts always have at least one revision
-                LatestRevision = post.Revisions.OrderByDescending(rev => rev.CreationTime).First(),
+                // invariant: posts always have at least one revision.
+                // since UUIDv7 is time-ordered, we can use Id for ordering instead of the non-indexed CreationTime
+                LatestRevision = post.Revisions.OrderByDescending(rev => rev.Id).First(),
                 // post score is the sum of all vote values (+1 for upvote, -1 for downvote)
                 VoteScore = post.Votes.Select(vote => vote.Value).Sum()
             });
@@ -43,10 +44,11 @@ public sealed partial class PostsController
         // apply sorting
         query = (request.SortOrder, request.SortMode) switch
         {
-            (SortOrder.Ascending, PostListSortMode.Activity) => query.OrderBy(postEntry => postEntry.LatestRevision.CreationTime),
-            (SortOrder.Descending, PostListSortMode.Activity) => query.OrderByDescending(postEntry => postEntry.LatestRevision.CreationTime),
-            (SortOrder.Ascending, PostListSortMode.Score) => query.OrderBy(postEntry => postEntry.VoteScore).ThenBy(postEntry => postEntry.LatestRevision.CreationTime),
-            _ => query.OrderByDescending(postEntry => postEntry.VoteScore).ThenByDescending(postEntry => postEntry.LatestRevision.CreationTime),
+            // uuidv7 is time-ordered, so ordering by id is equivalent to ordering by creation time
+            (SortOrder.Ascending, PostListSortMode.Activity) => query.OrderBy(postEntry => postEntry.LatestRevision.Id),
+            (SortOrder.Descending, PostListSortMode.Activity) => query.OrderByDescending(postEntry => postEntry.LatestRevision.Id),
+            (SortOrder.Ascending, PostListSortMode.Score) => query.OrderBy(postEntry => postEntry.VoteScore).ThenBy(postEntry => postEntry.LatestRevision.Id),
+            _ => query.OrderByDescending(postEntry => postEntry.VoteScore).ThenByDescending(postEntry => postEntry.LatestRevision.Id),
         };
 
         List<PostListResponseEntry> posts = await query
@@ -87,7 +89,7 @@ public sealed partial class PostsController
             {
                 Post = post,
                 // invariant: posts always have at least one revision
-                LatestRevision = post.Revisions.OrderByDescending(rev => rev.CreationTime).First(),
+                LatestRevision = post.Revisions.OrderByDescending(rev => rev.Id).First(),
             })
             .Where(postInfo => postInfo.Post.Id == request.PostId)
             // construct result

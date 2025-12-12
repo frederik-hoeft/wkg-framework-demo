@@ -1,13 +1,14 @@
 using Asp.Versioning;
 using Cloudbb.Web.Api.V1.Models.Posts;
+using Cloudbb.Web.Services.Auth.Policies;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Cloudbb.Web.Api.V1.Controllers;
 
-[Authorize]
 [ApiController]
 [ApiVersion(API_V1)]
+[Authorize(AuthRoles.USER)]
 [Route("api/v{version:apiVersion}/posts")]
 public partial class PostsController
 {
