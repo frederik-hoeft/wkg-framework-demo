@@ -52,6 +52,15 @@ public sealed class PostsController_GetPostsTests : ControllerBaseTest<PostsCont
         Assert.IsNotNull(firstPost.Title);
         Assert.IsNotNull(firstPost.ContentPreview);
         Assert.IsGreaterThanOrEqualTo(lowerBound: 1, firstPost.Revisions);
+
+        // Post1OfUser1 has 2 comments in the test data
+        PostListResponseEntry? post1ofUser1 = response.Posts.Find(p => p.PostId == IntegrationTestDbLoader.Post1OfUser1Id);
+        Assert.IsNotNull(post1ofUser1);
+        Assert.AreEqual(2, post1ofUser1.CommentCount);
+        // Post2OfUser1 has 0 comments in the test data
+        PostListResponseEntry? post2ofUser1 = response.Posts.Find(p => p.PostId == IntegrationTestDbLoader.Post2OfUser1Id);
+        Assert.IsNotNull(post2ofUser1);
+        Assert.AreEqual(0, post2ofUser1.CommentCount);
     }, TestContext.CancellationToken);
 
     [TestMethod]

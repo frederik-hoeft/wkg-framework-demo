@@ -68,7 +68,8 @@ public sealed partial class PostsController
                 postInfo.VoteScore,
                 // convert database UTC time to provided timezone
                 TimeZoneInfo.ConvertTimeFromUtc(postInfo.LatestRevision.CreationTime, tzinfo),
-                postInfo.Post.Revisions.Count
+                postInfo.Post.Revisions.Count,
+                postInfo.Post.Comments.Count
             ))
             .ToListAsync(ct);
 
