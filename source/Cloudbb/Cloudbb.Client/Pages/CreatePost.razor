@@ -1,0 +1,96 @@
+@page "/posts/create"
+@using Cloudbb.Client.Models
+@using Cloudbb.Client.Services.Posts
+@inject IPostService PostService
+@inject NavigationManager Navigation
+@inject ISnackbar Snackbar
+@attribute [Authorize]
+
+<PageTitle>Create Post - Cloudbb Forum</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Medium" Class="mt-4">
+    <MudPaper Class="pa-6">
+        <MudText Typo="Typo.h4" Class="mb-4">Create New Post</MudText>
+
+        <EditForm Model="@postRequest" OnValidSubmit="@HandleCreatePost">
+            <DataAnnotationsValidator />
+            
+            <MudTextField @bind-Value="postRequest.Title"
+                          Label="Title"
+                          Variant="Variant.Outlined"
+                          FullWidth="true"
+                          Margin="Margin.Normal"
+                          Required="true"
+                          Counter="256"
+                          MaxLength="256"
+                          HelperText="Maximum 256 characters"
+                          For="@(() => postRequest.Title)" />
+
+            <MudTextField @bind-Value="postRequest.Content"
+                          Label="Content"
+                          Variant="Variant.Outlined"
+                          FullWidth="true"
+                          Margin="Margin.Normal"
+                          Required="true"
+                          Lines="10"
+                          HelperText="Write your post content here"
+                          For="@(() => postRequest.Content)" />
+
+            <MudStack Row="true" Spacing="3" Class="mt-4">
+                <MudButton ButtonType="ButtonType.Submit"
+                           Variant="Variant.Filled"
+                           Color="Color.Primary"
+                           Size="Size.Large"
+                           Disabled="@isLoading">
+                    @if (isLoading)
+                    {
+                        <MudProgressCircular Class="mr-2" Size="Size.Small" Indeterminate="true" />
+                    }
+                    Create Post
+                </MudButton>
+                <MudButton Variant="Variant.Outlined"
+                           Color="Color.Default"
+                           Size="Size.Large"
+                           OnClick="@(() => Navigation.NavigateTo("/posts"))"
+                           Disabled="@isLoading">
+                    Cancel
+                </MudButton>
+            </MudStack>
+        </EditForm>
+    </MudPaper>
+</MudContainer>
+
+@code {
+    private PostCreationRequest postRequest = new();
+    private bool isLoading = false;
+
+    private async Task HandleCreatePost()
+    {
+        isLoading = true;
+        StateHasChanged();
+
+        try
+        {
+            PostCreationResponse? response = await PostService.CreatePostAsync(postRequest);
+            
+            if (response is not null)
+            {
+                Snackbar.Add("Post created successfully!", Severity.Success);
+                Navigation.NavigateTo($"/posts/{response.PostId}");
+            }
+            else
+            {
+                Snackbar.Add("Failed to create post. Please try again.", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"An error occurred: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+}
