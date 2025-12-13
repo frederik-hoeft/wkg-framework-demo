@@ -1,4 +1,6 @@
-﻿@inherits LayoutComponentBase
+﻿@using Cloudbb.Client.Services.Auth
+@using Cloudbb.Client.Components
+@inherits LayoutComponentBase
 @inject IAuthService AuthService
 @inject NavigationManager Navigation
 
@@ -9,6 +11,7 @@
         <MudSpacer />
         <AuthorizeView>
             <Authorized>
+                <TimeZoneSelector />
                 <MudText Class="mr-3">Welcome, @context.User.Identity?.Name</MudText>
                 <MudButton Color="Color.Inherit" OnClick="Logout">Logout</MudButton>
             </Authorized>

@@ -1,0 +1,71 @@
+@using Cloudbb.Client.Services.TimeZone
+@inject ITimeZoneService TimeZoneService
+@inject ISnackbar Snackbar
+
+<MudTooltip Text="Set Timezone">
+    <MudIconButton Icon="@Icons.Material.Filled.Schedule" 
+                   Color="Color.Inherit" 
+                   OnClick="@(() => isDialogOpen = true)" />
+</MudTooltip>
+
+<MudDialog @bind-Visible="isDialogOpen">
+    <DialogContent>
+        <MudText Typo="Typo.h6" Class="mb-4">Select Your Timezone</MudText>
+        
+        <MudTextField @bind-Value="ianaTimeZone"
+                      Label="IANA Timezone ID"
+                      Variant="Variant.Outlined"
+                      FullWidth="true"
+                      HelperText="e.g., America/New_York, Europe/London, Asia/Tokyo"
+                      Class="mb-3" />
+        
+        <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-2">
+            Common Timezones:
+        </MudText>
+        <MudStack Row="true" Wrap="Wrap.Wrap" Spacing="2">
+            <MudButton Variant="Variant.Outlined" Size="Size.Small" OnClick="@(() => SetCommonTimezone("UTC"))">UTC</MudButton>
+            <MudButton Variant="Variant.Outlined" Size="Size.Small" OnClick="@(() => SetCommonTimezone("America/New_York"))">New York</MudButton>
+            <MudButton Variant="Variant.Outlined" Size="Size.Small" OnClick="@(() => SetCommonTimezone("America/Los_Angeles"))">Los Angeles</MudButton>
+            <MudButton Variant="Variant.Outlined" Size="Size.Small" OnClick="@(() => SetCommonTimezone("Europe/London"))">London</MudButton>
+            <MudButton Variant="Variant.Outlined" Size="Size.Small" OnClick="@(() => SetCommonTimezone("Europe/Paris"))">Paris</MudButton>
+            <MudButton Variant="Variant.Outlined" Size="Size.Small" OnClick="@(() => SetCommonTimezone("Europe/Berlin"))">Berlin</MudButton>
+            <MudButton Variant="Variant.Outlined" Size="Size.Small" OnClick="@(() => SetCommonTimezone("Asia/Tokyo"))">Tokyo</MudButton>
+            <MudButton Variant="Variant.Outlined" Size="Size.Small" OnClick="@(() => SetCommonTimezone("Australia/Sydney"))">Sydney</MudButton>
+        </MudStack>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="@(() => isDialogOpen = false)">Cancel</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="SaveTimezone">Save</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    private bool isDialogOpen = false;
+    private string ianaTimeZone = "UTC";
+
+    protected override async Task OnInitializedAsync()
+    {
+        Models.TimeZone currentTimeZone = await TimeZoneService.GetTimeZoneAsync();
+        ianaTimeZone = currentTimeZone.IanaTimeZoneId ?? "UTC";
+    }
+
+    private void SetCommonTimezone(string timezone)
+    {
+        ianaTimeZone = timezone;
+    }
+
+    private async Task SaveTimezone()
+    {
+        try
+        {
+            Models.TimeZone timeZone = new(ianaTimeZone);
+            await TimeZoneService.SetTimeZoneAsync(timeZone);
+            Snackbar.Add($"Timezone set to {ianaTimeZone}", Severity.Success);
+            isDialogOpen = false;
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to save timezone: {ex.Message}", Severity.Error);
+        }
+    }
+}
