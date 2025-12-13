@@ -872,6 +872,28 @@
         "additionalProperties": false,
         "description": "Represents a login request."
       },
+      "PaginationInfo": {
+        "type": "object",
+        "properties": {
+          "currentPage": {
+            "type": "integer",
+            "description": "The current page number in the paginated result set.",
+            "format": "int32"
+          },
+          "currentPageSize": {
+            "type": "integer",
+            "description": "The number of items per page.",
+            "format": "int32"
+          },
+          "totalPages": {
+            "type": "integer",
+            "description": "The total number of pages available.",
+            "format": "int32"
+          }
+        },
+        "additionalProperties": false,
+        "description": "Pagination details for paginated post list responses."
+      },
       "PostCreationRequest": {
         "required": [
           "content",
@@ -1005,6 +1027,9 @@
               "$ref": "#/components/schemas/PostListResponseEntry"
             },
             "description": "Collection of post entries matching the request criteria."
+          },
+          "paginationInfo": {
+            "$ref": "#/components/schemas/PaginationInfo"
           }
         },
         "additionalProperties": false,

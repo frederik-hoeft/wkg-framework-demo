@@ -5,4 +5,5 @@
 /// Used for paginated display of posts in the forum interface.
 /// </summary>
 /// <param name="Posts">Collection of post entries matching the request criteria.</param>
-public sealed record PostListResponse(List<PostListResponseEntry> Posts);
+/// <param name="PaginationInfo">Pagination details about the current result set.</param>
+public sealed record PostListResponse(List<PostListResponseEntry> Posts, PaginationInfo PaginationInfo);

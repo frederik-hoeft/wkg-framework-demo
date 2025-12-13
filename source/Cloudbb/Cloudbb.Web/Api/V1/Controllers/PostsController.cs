@@ -1,4 +1,4 @@
-using Cloudbb.Web.Api.V1.Extensions;
+﻿using Cloudbb.Web.Api.V1.Extensions;
 using Cloudbb.Web.Api.V1.Models;
 using Cloudbb.Web.Api.V1.Models.Comments;
 using Cloudbb.Web.Api.V1.Models.Posts;
@@ -24,6 +24,13 @@ public sealed partial class PostsController(ITransactionServiceHandle transactio
         if (!TryValidateContext(request, out IActionResult? errorResult, out Guid _))
         {
             return errorResult;
+        }
+        int totalPosts = await dbContext.Set<CloudbbPost>().AsNoTracking().CountAsync(ct);
+        // validate pagination parameters
+        int maxPageNumber = (int)Math.Ceiling((double)totalPosts / request.PageSize);
+        if (request.PageNumber < 1 || request.PageNumber > Math.Max(1, maxPageNumber))
+        {
+            return BadRequest($"PageNumber must be between 1 and {maxPageNumber}.");
         }
         // tz is nullable here because we have a default
         TimeZoneInfo tzinfo = (request.TimeZone ?? s_defaultTimeZone).GetTimeZoneInfo();
@@ -71,7 +78,17 @@ public sealed partial class PostsController(ITransactionServiceHandle transactio
             ))
             .ToListAsync(ct);
 
-        return Ok(new PostListResponse(posts));
+        PostListResponse result = new
+        (
+            posts,
+            new PaginationInfo
+            (
+                CurrentPage: request.PageNumber,
+                CurrentPageSize: posts.Count,
+                TotalPages: maxPageNumber
+            )
+        );
+        return Ok(result);
     }, cancellationToken);
 
     public partial Task<IActionResult> GetPostAsync(PostReadRequest request, CancellationToken cancellationToken) => Transaction.Scoped.RunReadOnlyAsync(async (dbContext, ct) =>
