@@ -110,6 +110,18 @@ internal sealed class Startup : IAsyncStartupScript
             options.JsonSerializerOptions.PropertyNamingPolicy = namingPolicy;
             options.JsonSerializerOptions.WriteIndented = true;
         });
+        
+        // Add CORS support for Blazor client
+        services.AddCors(options =>
+        {
+            options.AddPolicy("BlazorClient", policy =>
+            {
+                policy.WithOrigins("https://localhost:7089", "http://localhost:5097")
+                      .AllowAnyMethod()
+                      .AllowAnyHeader()
+                      .AllowCredentials();
+            });
+        });
         services.AddApiVersioning(options =>
         {
             options.AssumeDefaultVersionWhenUnspecified = true;
@@ -144,6 +156,9 @@ internal sealed class Startup : IAsyncStartupScript
         }
 
         app.UseHttpsRedirection();
+
+        // Enable CORS
+        app.UseCors("BlazorClient");
 
         app.UseAuthentication();
         app.UseAuthorization();

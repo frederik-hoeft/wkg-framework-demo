@@ -12,12 +12,13 @@
         <EditForm Model="@loginRequest" OnValidSubmit="@HandleLogin">
             <DataAnnotationsValidator />
             
-            <MudTextField @bind-Value="loginRequest.Username"
-                          Label="Username"
+            <MudTextField @bind-Value="loginRequest.Email"
+                          Label="Email"
                           Variant="Variant.Outlined"
                           FullWidth="true"
                           Margin="Margin.Normal"
-                          For="@(() => loginRequest.Username)" />
+                          InputType="InputType.Email"
+                          For="@(() => loginRequest.Email)" />
 
             <MudTextField @bind-Value="loginRequest.Password"
                           Label="Password"

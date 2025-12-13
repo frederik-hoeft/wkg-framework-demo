@@ -5,6 +5,7 @@ using Cloudbb.Client.Services;
 using MudBlazor.Services;
 using Blazored.LocalStorage;
 using Microsoft.AspNetCore.Components.Authorization;
+using System.Text.Json;
 
 WebAssemblyHostBuilder builder = WebAssemblyHostBuilder.CreateDefault(args);
 builder.RootComponents.Add<App>("#app");
@@ -22,7 +23,13 @@ builder.Services.AddBlazoredLocalStorage();
 
 // Add authentication services
 builder.Services.AddAuthorizationCore();
+builder.Services.AddSingleton(new JsonSerializerOptions
+{
+    PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+});
+builder.Services.AddScoped<ITokenStore, LocalStorageTokenStore>();
 builder.Services.AddScoped<AuthenticationStateProvider, JwtAuthenticationStateProvider>();
+builder.Services.AddScoped<IJwtAuthenticationState, JwtAuthenticationStateAccessor>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 
 await builder.Build().RunAsync();
