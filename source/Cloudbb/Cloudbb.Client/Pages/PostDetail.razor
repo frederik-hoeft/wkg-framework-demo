@@ -51,7 +51,7 @@
                 </MudItem>
                 <MudItem xs="12">
                     <MudText Typo="Typo.body2" Color="Color.Secondary">
-                        By @post.Username (User ID: @post.UserId.ToString().Substring(0, 8)...) • @post.LastModified.ToString("g") 
+                        By @post.Username (User ID: @post.UserId.ToString()[..8]...) • @post.LastModified.ToString("g") 
                         @if (post.Revisions > 1)
                         {
                             <text> • Edited (@post.Revisions revisions)</text>
@@ -132,7 +132,7 @@
                                 <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Start">
                                     <div>
                                         <MudText Typo="Typo.body2" Color="Color.Secondary">
-                                            @comment.Username (User ID: @comment.UserId.ToString().Substring(0, 8)...) • @comment.CreationTime.ToString("g")
+                                            @comment.Username (User ID: @comment.UserId.ToString()[..8]...) • @comment.CreationTime.ToString("g")
                                         </MudText>
                                         <MudText Typo="Typo.caption" Color="Color.Secondary">
                                             Comment ID: @comment.CommentId
