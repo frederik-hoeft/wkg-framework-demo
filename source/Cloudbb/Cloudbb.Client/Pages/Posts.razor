@@ -72,6 +72,9 @@
                     <MudGrid>
                         <MudItem xs="12">
                             <MudText Typo="Typo.h6" Color="Color.Primary">@post.Title</MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                Post ID: @post.PostId • User ID: @post.UserId.ToString().Substring(0, 8)...
+                            </MudText>
                         </MudItem>
                         <MudItem xs="12">
                             <MudText Typo="Typo.body2" Color="Color.Default">@post.ContentPreview</MudText>

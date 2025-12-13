@@ -16,7 +16,19 @@ builder.RootComponents.Add<HeadOutlet>("head::after");
 
 // Configure API base URL
 string apiBaseUrl = builder.Configuration["ApiBaseUrl"] ?? "https://localhost:7156"; // Default to API port
-builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(apiBaseUrl) });
+
+// Add authorization message handler
+builder.Services.AddScoped<AuthorizationMessageHandler>();
+builder.Services.AddScoped(sp =>
+{
+    AuthorizationMessageHandler handler = sp.GetRequiredService<AuthorizationMessageHandler>();
+    handler.InnerHandler = new HttpClientHandler();
+    HttpClient httpClient = new(handler)
+    {
+        BaseAddress = new Uri(apiBaseUrl)
+    };
+    return httpClient;
+});
 
 // Add MudBlazor services
 builder.Services.AddMudServices();

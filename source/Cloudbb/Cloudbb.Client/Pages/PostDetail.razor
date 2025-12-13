@@ -51,11 +51,14 @@
                 </MudItem>
                 <MudItem xs="12">
                     <MudText Typo="Typo.body2" Color="Color.Secondary">
-                        By @post.Username • @post.LastModified.ToString("g") 
+                        By @post.Username (User ID: @post.UserId.ToString().Substring(0, 8)...) • @post.LastModified.ToString("g") 
                         @if (post.Revisions > 1)
                         {
                             <text> • Edited (@post.Revisions revisions)</text>
                         }
+                    </MudText>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">
+                        Post ID: @post.PostId
                     </MudText>
                 </MudItem>
                 <MudItem xs="12" Class="mt-4">
@@ -127,9 +130,14 @@
                         <MudGrid>
                             <MudItem xs="12">
                                 <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Start">
-                                    <MudText Typo="Typo.body2" Color="Color.Secondary">
-                                        @comment.Username • @comment.CreationTime.ToString("g")
-                                    </MudText>
+                                    <div>
+                                        <MudText Typo="Typo.body2" Color="Color.Secondary">
+                                            @comment.Username (User ID: @comment.UserId.ToString().Substring(0, 8)...) • @comment.CreationTime.ToString("g")
+                                        </MudText>
+                                        <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                            Comment ID: @comment.CommentId
+                                        </MudText>
+                                    </div>
                                     @if (comment.CanEdit)
                                     {
                                         <MudIconButton Icon="@Icons.Material.Filled.Delete" 
