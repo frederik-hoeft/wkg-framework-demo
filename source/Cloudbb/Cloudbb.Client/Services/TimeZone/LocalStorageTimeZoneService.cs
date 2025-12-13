@@ -31,7 +31,7 @@ internal sealed class LocalStorageTimeZoneService
         }
         
         // Default to UTC
-        return new Models.TimeZone("UTC", System.TimeSpan.Zero);
+        return new Models.TimeZone("UTC", TimeSpan.Zero);
     }
 
     public async Task SetTimeZoneAsync(Models.TimeZone timeZone)
