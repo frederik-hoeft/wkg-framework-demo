@@ -45,7 +45,7 @@
                                                OnClick="@ShowEditDialog" />
                                 <MudIconButton Icon="@Icons.Material.Filled.Delete" 
                                                Color="Color.Error" 
-                                               OnClick="@ShowDeleteConfirmDialog" />
+                                               OnClick="@DeletePost" />
                             </MudStack>
                         }
                     </MudStack>
@@ -376,9 +376,8 @@
         Navigation.NavigateTo($"/posts/{PostId}/edit");
     }
 
-    private async Task ShowDeleteConfirmDialog()
+    private async Task DeletePost()
     {
-        // For now, just delete directly with confirmation
         try
         {
             PostDeleteRequest request = new() { PostId = PostId };
