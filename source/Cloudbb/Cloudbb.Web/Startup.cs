@@ -107,8 +107,8 @@ internal sealed class Startup : IAsyncStartupScript
         });
 
         // Add CORS support for Blazor client
-        string[] allowedOrigins = configuration.GetValue<string[]>("CORS:AllowedOrigins")
-            ?? throw new InvalidOperationException("CORS:AllowedOrigins configuration is missing.");
+        string[] allowedOrigins = configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
+            ?? throw new InvalidOperationException("Cors:AllowedOrigins configuration is missing.");
         services.AddCors(options => options.AddPolicy("BlazorClient", policy => policy
             .WithOrigins(allowedOrigins)
             .AllowAnyMethod()
