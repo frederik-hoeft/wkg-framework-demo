@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Components.Authorization;
 
-namespace Cloudbb.Client.Services.Auth;
+namespace Cloudbb.Client.Services;
 
 internal sealed class JwtAuthenticationStateAccessor(AuthenticationStateProvider authenticationStateProvider) : IJwtAuthenticationState
 {

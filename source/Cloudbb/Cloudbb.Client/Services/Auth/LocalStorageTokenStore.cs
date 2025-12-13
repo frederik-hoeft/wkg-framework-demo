@@ -1,6 +1,6 @@
 ﻿using Blazored.LocalStorage;
 
-namespace Cloudbb.Client.Services.Auth;
+namespace Cloudbb.Client.Services;
 
 internal sealed class LocalStorageTokenStore(ILocalStorageService localStorage) : ITokenStore
 {

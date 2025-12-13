@@ -5,14 +5,10 @@ using Cloudbb.Web.Data;
 using Cloudbb.Web.Services.Auth;
 using Cloudbb.Web.Services.Auth.Default;
 using Cloudbb.Web.Services.Auth.Policies;
-using Cloudbb.Web.Services.Versioning;
-using Cloudbb.Web.Services.Versioning.Default;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
-using Prometheus;
 using System.Data;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -62,8 +58,8 @@ internal sealed class Startup : IAsyncStartupScript
             options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
         }).AddJwtBearer(options =>
         {
-            JwtRsaPemFileSigningKeyImportService keyImportService = new(configuration);
-            JwtRsaSigningKeyProvider keyLoader = new(keyImportService);
+            JwtECDsaPemFileSigningKeyImportService keyImportService = new(configuration);
+            JwtECDsaSigningKeyProvider keyLoader = new(keyImportService);
             Task<SecurityKey> keyTask = keyLoader.GetKeyAsync().AsTask();
             keyTask.Wait();
             options.TokenValidationParameters = new TokenValidationParameters
@@ -87,20 +83,17 @@ internal sealed class Startup : IAsyncStartupScript
         services.AddTransactionManagement<CloudbbDbContext>(transactionOptions => transactionOptions
             .UseIsolationLevel(IsolationLevel.ReadCommitted));
 
-        services.AddHealthChecks();
-
         //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
         //                                            Register application services                                                 //
         //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
         // auth services
-        services.AddSingleton<IJwtAlgorithmProvider, RsaSha256AlgorithmProvider>();
-        services.AddSingleton<IJwtRsaSigningKeyImportService, JwtRsaPemFileSigningKeyImportService>();
-        services.AddSingleton<IJwtSigningKeyProvider, JwtRsaSigningKeyProvider>();
+        services.AddSingleton<IJwtAlgorithmProvider, JwtEcdsaSha256AlgorithmProvider>();
+        services.AddSingleton<IJwtECDsaSigningKeyImportService, JwtECDsaPemFileSigningKeyImportService>();
+        services.AddSingleton<IJwtSigningKeyProvider, JwtECDsaSigningKeyProvider>();
         services.AddScoped<IJwtService, JwtService>();
         services.AddScoped<IUserClaimIndex, UserClaimIndex>();
         services.AddSingleton<ITimingRandomizationService, CsprngTimingRandomizationService>();
-        services.AddSingleton<IVersionProvider, CloudbbWebVersionProvider>();
 
         services.AddControllers().AddJsonOptions(options =>
         {
@@ -111,15 +104,18 @@ internal sealed class Startup : IAsyncStartupScript
             options.JsonSerializerOptions.PropertyNamingPolicy = namingPolicy;
             options.JsonSerializerOptions.WriteIndented = true;
         });
-
+        
         // Add CORS support for Blazor client
-        string[] allowedOrigins = configuration.GetValue<string[]>("CORS:AllowedOrigins")
-            ?? throw new InvalidOperationException("CORS:AllowedOrigins configuration is missing.");
-        services.AddCors(options => options.AddPolicy("BlazorClient", policy => policy
-            .WithOrigins(allowedOrigins)
-            .AllowAnyMethod()
-            .AllowAnyHeader()
-            .AllowCredentials()));
+        services.AddCors(options =>
+        {
+            options.AddPolicy("BlazorClient", policy =>
+            {
+                policy.WithOrigins("https://localhost:7089", "http://localhost:5097")
+                      .AllowAnyMethod()
+                      .AllowAnyHeader()
+                      .AllowCredentials();
+            });
+        });
         services.AddApiVersioning(options =>
         {
             options.AssumeDefaultVersionWhenUnspecified = true;
@@ -162,13 +158,6 @@ internal sealed class Startup : IAsyncStartupScript
         app.UseAuthorization();
 
         app.MapControllers();
-        app.MapHealthChecks("/health");
-
-        app.UseHttpMetrics(options => options.ConfigureMeasurements(measurementOptions =>
-            // Only measure exemplar if the HTTP response status code is not "OK".
-            measurementOptions.ExemplarPredicate = context => context.Response.StatusCode is not StatusCodes.Status200OK));
-
-        app.MapMetrics("/metrics");
 
         await using AsyncServiceScope scope = app.Services.CreateAsyncScope();
         await using CloudbbDbContext context = scope.ServiceProvider.GetRequiredService<CloudbbDbContext>();
