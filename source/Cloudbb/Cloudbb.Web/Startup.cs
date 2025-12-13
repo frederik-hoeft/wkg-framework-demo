@@ -8,6 +8,7 @@ using Cloudbb.Web.Services.Auth.Policies;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
 using System.Data;
 using System.Text.Json;
@@ -104,18 +105,15 @@ internal sealed class Startup : IAsyncStartupScript
             options.JsonSerializerOptions.PropertyNamingPolicy = namingPolicy;
             options.JsonSerializerOptions.WriteIndented = true;
         });
-        
+
         // Add CORS support for Blazor client
-        services.AddCors(options =>
-        {
-            options.AddPolicy("BlazorClient", policy =>
-            {
-                policy.WithOrigins("https://localhost:7089", "http://localhost:5097")
-                      .AllowAnyMethod()
-                      .AllowAnyHeader()
-                      .AllowCredentials();
-            });
-        });
+        string[] allowedOrigins = configuration.GetValue<string[]>("CORS:AllowedOrigins")
+            ?? throw new InvalidOperationException("CORS:AllowedOrigins configuration is missing.");
+        services.AddCors(options => options.AddPolicy("BlazorClient", policy => policy
+            .WithOrigins(allowedOrigins)
+            .AllowAnyMethod()
+            .AllowAnyHeader()
+            .AllowCredentials()));
         services.AddApiVersioning(options =>
         {
             options.AssumeDefaultVersionWhenUnspecified = true;
