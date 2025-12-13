@@ -2,7 +2,7 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 
-namespace Cloudbb.Client.Services;
+namespace Cloudbb.Client.Services.Auth;
 
 internal sealed class JwtAuthenticationStateProvider(ITokenStore tokenStore, HttpClient httpClient) : AuthenticationStateProvider
 {
