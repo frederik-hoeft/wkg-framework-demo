@@ -11,6 +11,7 @@
 /// <param name="VoteScore">Current voting score (upvotes minus downvotes) for post ranking.</param>
 /// <param name="LastModified">Timestamp of the most recent modification to the post.</param>
 /// <param name="Revisions">Total number of revisions made to the post. Will be at least 1.</param>
+/// <param name="CommentCount">Total number of comments associated with the post.</param>
 public sealed record PostListResponseEntry
 (
     Guid PostId,
@@ -19,5 +20,6 @@ public sealed record PostListResponseEntry
     string ContentPreview,
     int VoteScore,
     DateTime LastModified,
-    int Revisions
+    int Revisions,
+    int CommentCount
 );

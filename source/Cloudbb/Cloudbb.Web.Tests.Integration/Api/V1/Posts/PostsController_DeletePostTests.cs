@@ -34,7 +34,7 @@ public sealed class PostsController_DeletePostTests : ControllerBaseTest<PostsCo
         OkResult ok = Assert.IsInstanceOfType<OkResult>(result);
 
         // Verify post was deleted from database
-        ApplicationDbContext dbContextCheck = serviceProvider.GetRequiredService<ApplicationDbContext>();
+        CloudbbDbContext dbContextCheck = serviceProvider.GetRequiredService<CloudbbDbContext>();
         CloudbbPost? deletedPost = await dbContextCheck.Set<CloudbbPost>()
             .FirstOrDefaultAsync(p => p.Id == IntegrationTestDbLoader.Post1OfUser1Id, ct);
             
@@ -92,7 +92,7 @@ public sealed class PostsController_DeletePostTests : ControllerBaseTest<PostsCo
         ForbidResult forbid = Assert.IsInstanceOfType<ForbidResult>(result);
 
         // Verify post was NOT deleted
-        ApplicationDbContext dbContextCheck = serviceProvider.GetRequiredService<ApplicationDbContext>();
+        CloudbbDbContext dbContextCheck = serviceProvider.GetRequiredService<CloudbbDbContext>();
         CloudbbPost? stillExistsPost = await dbContextCheck.Set<CloudbbPost>()
             .FirstOrDefaultAsync(p => p.Id == IntegrationTestDbLoader.PostOfUser2Id, ct);
             
@@ -125,7 +125,7 @@ public sealed class PostsController_DeletePostTests : ControllerBaseTest<PostsCo
         OkResult ok = Assert.IsInstanceOfType<OkResult>(result);
 
         // Verify everything was cascade deleted
-        ApplicationDbContext dbContextCheck = serviceProvider.GetRequiredService<ApplicationDbContext>();
+        CloudbbDbContext dbContextCheck = serviceProvider.GetRequiredService<CloudbbDbContext>();
             
         CloudbbPost? deletedPost = await dbContextCheck.Set<CloudbbPost>()
             .FirstOrDefaultAsync(p => p.Id == IntegrationTestDbLoader.Post1OfUser1Id, ct);

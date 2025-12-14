@@ -11,15 +11,16 @@ using Wkg.AspNetCore.Transactions;
 
 namespace Cloudbb.Web.Tests.Integration;
 
-public abstract class ControllerBaseTest<TController> : TransactionalControllerTest<TController, ApplicationDbContext, IntegrationTestDbInitializer>
-    where TController : DatabaseController<ApplicationDbContext>
+public abstract class ControllerBaseTest<TController> : TransactionalControllerTest<TController, CloudbbDbContext, IntegrationTestDbInitializer>
+    where TController : DatabaseController<CloudbbDbContext>
 {
     public abstract TestContext TestContext { get; set; }
 
-    private protected static async ValueTask SetAuthenticatedUserContextAsync(PostsController controller, IServiceProvider serviceProvides, TestUser testUser, CancellationToken cancellationToken)
+    private protected static async ValueTask SetAuthenticatedUserContextAsync<TControllerType>(TControllerType controller, IServiceProvider serviceProvides, TestUser testUser, CancellationToken cancellationToken)
+        where TControllerType : DatabaseController<CloudbbDbContext>
     {
         IJwtService jwt = serviceProvides.GetRequiredService<IJwtService>();
-        ITransactionService<ApplicationDbContext> transaction = serviceProvides.GetRequiredService<ITransactionService<ApplicationDbContext>>();
+        ITransactionService<CloudbbDbContext> transaction = serviceProvides.GetRequiredService<ITransactionService<CloudbbDbContext>>();
 
         await transaction.Scoped.RunReadOnlyAsync(async (dbContext, ct) =>
         {

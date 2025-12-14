@@ -8,7 +8,7 @@ using Wkg.AspNetCore.TestAdapters.Initialization;
 
 namespace Cloudbb.Web.Tests.Integration;
 
-public sealed class IntegrationTestDbLoader : AsyncTestDatabaseLoader<IntegrationTestDbLoader, ApplicationDbContext>, IAsyncTestDatabaseLoader<ApplicationDbContext>
+public sealed class IntegrationTestDbLoader : AsyncTestDatabaseLoader<IntegrationTestDbLoader, CloudbbDbContext>, IAsyncTestDatabaseLoader<CloudbbDbContext>
 {
     internal static TestUser TestUser1 { get; } = TestUser.Create("GlobalTestUser1", "global-test-user1@example.com", "P@ssw0rdGlobalTestUser1", AuthPolicies.User.Roles);
 
@@ -20,7 +20,11 @@ public sealed class IntegrationTestDbLoader : AsyncTestDatabaseLoader<Integratio
 
     public static Guid PostOfUser2Id { get; } = Guid.CreateVersion7();
 
-    public async ValueTask InitializeDatabaseAsync(ApplicationDbContext dbContext, IServiceProvider serviceProvider, CancellationToken cancellationToken)
+    public static Guid Comment1OnPost1Id { get; } = Guid.CreateVersion7();
+
+    public static Guid Comment2OnPost1Id { get; } = Guid.CreateVersion7();
+
+    public async ValueTask InitializeDatabaseAsync(CloudbbDbContext dbContext, IServiceProvider serviceProvider, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(dbContext);
         ArgumentNullException.ThrowIfNull(serviceProvider);
@@ -124,6 +128,7 @@ public sealed class IntegrationTestDbLoader : AsyncTestDatabaseLoader<Integratio
         // Add comments to posts
         CloudbbComment comment1 = new()
         {
+            Id = Comment1OnPost1Id,
             PostId = post1.Id,
             UserId = user2.Id,
             Content = "Great post! Thanks for sharing.",
@@ -133,18 +138,13 @@ public sealed class IntegrationTestDbLoader : AsyncTestDatabaseLoader<Integratio
         
         CloudbbComment comment2 = new()
         {
+            Id = Comment2OnPost1Id,
             PostId = post1.Id, 
             UserId = user.Id,
             Content = "Thanks for the feedback!",
             CreationTime = now.AddDays(-3)
         };
         dbContext.Add(comment2);
-
-        await dbContext.SaveChangesAsync(cancellationToken);
-
-        // Add votes to comments
-        dbContext.Add(new CloudbbCommentVote { CommentId = comment1.Id, UserId = user.Id, Value = 1 }); // user1 upvotes comment1
-
         await dbContext.SaveChangesAsync(cancellationToken);
     }
 }

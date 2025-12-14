@@ -44,7 +44,7 @@ public sealed class AuthController_RegisterTests : ControllerBaseTest<AuthContro
         Assert.IsNotNull(validationResult);
 
         // Verify user was created in database
-        ApplicationDbContext dbContext = serviceProvider.GetRequiredService<ApplicationDbContext>();
+        CloudbbDbContext dbContext = serviceProvider.GetRequiredService<CloudbbDbContext>();
         CloudbbUser? createdUser = await dbContext.Set<CloudbbUser>()
             .Include(u => u.IdentityUser)
             .FirstOrDefaultAsync(u => u.IdentityUser.Email == request.Email, ct);

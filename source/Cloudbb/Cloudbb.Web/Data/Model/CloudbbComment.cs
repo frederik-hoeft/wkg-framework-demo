@@ -9,7 +9,7 @@ namespace Cloudbb.Web.Data.Model;
 /// Comments enable threaded discussions and user engagement with post content.
 /// Supports voting to indicate comment quality and relevance.
 /// </summary>
-public sealed class CloudbbComment() : CloudbbEntity, IDiscoverableModelConfiguration<CloudbbComment>
+public sealed partial class CloudbbComment() : CloudbbEntity, IDiscoverableModelConfiguration<CloudbbComment>
 {
     /// <summary>
     /// Foreign key referencing the user who authored this comment.

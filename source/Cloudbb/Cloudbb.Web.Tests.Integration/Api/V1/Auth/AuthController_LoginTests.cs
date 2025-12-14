@@ -25,7 +25,7 @@ public sealed class AuthController_LoginTests : ControllerBaseTest<AuthControlle
     {
         // First create a user to login with
         UserManager<IdentityUser> userManager = serviceProvider.GetRequiredService<UserManager<IdentityUser>>();
-        ApplicationDbContext dbContext = serviceProvider.GetRequiredService<ApplicationDbContext>();
+        CloudbbDbContext dbContext = serviceProvider.GetRequiredService<CloudbbDbContext>();
             
         IdentityUser identityUser = new()
         {
@@ -88,7 +88,7 @@ public sealed class AuthController_LoginTests : ControllerBaseTest<AuthControlle
     {
         // First create a user
         UserManager<IdentityUser> userManager = serviceProvider.GetRequiredService<UserManager<IdentityUser>>();
-        ApplicationDbContext dbContext = serviceProvider.GetRequiredService<ApplicationDbContext>();
+        CloudbbDbContext dbContext = serviceProvider.GetRequiredService<CloudbbDbContext>();
             
         IdentityUser identityUser = new()
         {

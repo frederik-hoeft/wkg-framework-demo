@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using Cloudbb.Web.Api.V1.Controllers;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using Wkg.EntityFrameworkCore.Configuration;
 
@@ -9,7 +10,7 @@ namespace Cloudbb.Web.Data.Model;
 /// Posts are the primary content containers that users create to start discussions.
 /// Supports versioning through revisions and user interactions through voting and comments.
 /// </summary>
-public sealed class CloudbbPost() : CloudbbEntity, IDiscoverableModelConfiguration<CloudbbPost>
+public sealed partial class CloudbbPost() : CloudbbEntity, IDiscoverableModelConfiguration<CloudbbPost>
 {
     /// <summary>
     /// Foreign key referencing the user who authored this post.

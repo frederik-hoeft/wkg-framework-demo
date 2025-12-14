@@ -24,8 +24,8 @@ internal sealed class Startup : IAsyncStartupScript
     {
         // Add Entity Framework
         // use source-generated model discovery for better startup performance and compile-time model validation
-        services.AddSingleton<IModelLoader, ApplicationModelLoader>();
-        services.AddDbContext<ApplicationDbContext>(options =>
+        services.AddSingleton<IModelLoader, CloudbbModelLoader>();
+        services.AddDbContext<CloudbbDbContext>(options =>
             options.UseNpgsql(configuration.GetConnectionString("DatabaseConnection")));
 
         // Add Identity services
@@ -47,7 +47,7 @@ internal sealed class Startup : IAsyncStartupScript
             options.User.RequireUniqueEmail = true;
             options.SignIn.RequireConfirmedEmail = false;
         })
-        .AddEntityFrameworkStores<ApplicationDbContext>()
+        .AddEntityFrameworkStores<CloudbbDbContext>()
         .AddDefaultTokenProviders();
 
         // Add JWT Authentication
@@ -80,7 +80,7 @@ internal sealed class Startup : IAsyncStartupScript
 
         services.AddHttpContextAccessor();
 
-        services.AddTransactionManagement<ApplicationDbContext>(transactionOptions => transactionOptions
+        services.AddTransactionManagement<CloudbbDbContext>(transactionOptions => transactionOptions
             .UseIsolationLevel(IsolationLevel.ReadCommitted));
 
         //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -145,7 +145,7 @@ internal sealed class Startup : IAsyncStartupScript
         app.MapControllers();
 
         await using AsyncServiceScope scope = app.Services.CreateAsyncScope();
-        await using ApplicationDbContext context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        await using CloudbbDbContext context = scope.ServiceProvider.GetRequiredService<CloudbbDbContext>();
         await context.Database.MigrateAsync(cancellationToken);
     }
 }

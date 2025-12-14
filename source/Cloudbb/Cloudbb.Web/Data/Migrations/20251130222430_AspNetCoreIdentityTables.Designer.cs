@@ -11,7 +11,7 @@ using System;
 
 namespace Cloudbb.Web.Data.Migrations
 {
-    [DbContext(typeof(ApplicationDbContext))]
+    [DbContext(typeof(CloudbbDbContext))]
     [Migration("20251130222430_AspNetCoreIdentityTables")]
     partial class AspNetCoreIdentityTables
     {

@@ -189,7 +189,7 @@ public sealed class AuthController_EndToEndTests : ControllerBaseTest<AuthContro
             Assert.AreNotEqual(response1.Token, response2.Token);
 
             // Verify both users exist in database
-            ApplicationDbContext dbContext = serviceProvider.GetRequiredService<ApplicationDbContext>();
+            CloudbbDbContext dbContext = serviceProvider.GetRequiredService<CloudbbDbContext>();
             CloudbbUser? user1 = await dbContext.Set<CloudbbUser>()
                 .Include(u => u.IdentityUser)
                 .FirstOrDefaultAsync(u => u.IdentityUser.Email == request1.Email, ct);

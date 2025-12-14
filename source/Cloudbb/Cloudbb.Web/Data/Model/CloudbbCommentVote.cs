@@ -9,7 +9,7 @@ namespace Cloudbb.Web.Data.Model;
 /// Used for indicating comment quality and relevance to the discussion.
 /// Each user can have at most one vote per comment.
 /// </summary>
-public sealed class CloudbbCommentVote() : CloudbbVote, IDiscoverableModelConfiguration<CloudbbCommentVote>
+public sealed partial class CloudbbCommentVote() : CloudbbVote, IDiscoverableModelConfiguration<CloudbbCommentVote>
 {
     /// <summary>
     /// Foreign key referencing the comment being voted on.

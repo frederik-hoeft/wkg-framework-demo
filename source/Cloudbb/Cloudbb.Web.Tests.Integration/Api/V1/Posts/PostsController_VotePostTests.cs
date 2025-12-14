@@ -50,7 +50,7 @@ public sealed class PostsController_VotePostTests : ControllerBaseTest<PostsCont
             Assert.AreEqual(initialScore + 1, response.NewScore); // Score should increase by 1
 
             // Verify vote was saved in database
-            ApplicationDbContext dbContextCheck = serviceProvider.GetRequiredService<ApplicationDbContext>();
+            CloudbbDbContext dbContextCheck = serviceProvider.GetRequiredService<CloudbbDbContext>();
 
             CloudbbPostVote? vote = await dbContextCheck.Set<CloudbbPostVote>()
                 .FirstOrDefaultAsync(v => v.PostId == post.Id && v.UserId == IntegrationTestDbLoader.TestUser1.UserId, ct1);
@@ -90,7 +90,7 @@ public sealed class PostsController_VotePostTests : ControllerBaseTest<PostsCont
             Assert.AreEqual(initialScore - 1, response.NewScore); // Score should decrease by 1
 
             // Verify vote was saved in database
-            ApplicationDbContext dbContextCheck = serviceProvider.GetRequiredService<ApplicationDbContext>();
+            CloudbbDbContext dbContextCheck = serviceProvider.GetRequiredService<CloudbbDbContext>();
 
             CloudbbPostVote? vote = await dbContextCheck.Set<CloudbbPostVote>()
                 .FirstOrDefaultAsync(v => v.PostId == post.Id && v.UserId == IntegrationTestDbLoader.TestUser1.UserId, ct1);
@@ -135,7 +135,7 @@ public sealed class PostsController_VotePostTests : ControllerBaseTest<PostsCont
             Assert.AreEqual(VoteType.Downvote, response.UserVote);
 
             // Verify vote was updated in database
-            ApplicationDbContext dbContextCheck = serviceProvider.GetRequiredService<ApplicationDbContext>();
+            CloudbbDbContext dbContextCheck = serviceProvider.GetRequiredService<CloudbbDbContext>();
             CloudbbPostVote? updatedVote = await dbContextCheck.Set<CloudbbPostVote>()
                 .FirstOrDefaultAsync(v => v.PostId == post.Id && v.UserId == IntegrationTestDbLoader.TestUser1.UserId, ct1);
             
@@ -179,7 +179,7 @@ public sealed class PostsController_VotePostTests : ControllerBaseTest<PostsCont
             Assert.AreEqual(VoteType.NoVote, response.UserVote);
 
             // Verify vote was deleted from database
-            ApplicationDbContext dbContextCheck = serviceProvider.GetRequiredService<ApplicationDbContext>();
+            CloudbbDbContext dbContextCheck = serviceProvider.GetRequiredService<CloudbbDbContext>();
             CloudbbPostVote? deletedVote = await dbContextCheck.Set<CloudbbPostVote>()
                 .FirstOrDefaultAsync(v => v.PostId == post.Id && v.UserId == IntegrationTestDbLoader.TestUser1.UserId, ct1);
             

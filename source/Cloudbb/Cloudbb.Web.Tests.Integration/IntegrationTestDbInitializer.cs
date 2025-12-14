@@ -22,7 +22,7 @@ public sealed class IntegrationTestDbInitializer : IAsyncDITestInitializer
         // apply appsettings.Testing.json configuration
         Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", "Testing");
         IConfiguration configuration = await services.ConfigureUsingAsync<Startup>(cancellationToken: cancellationToken);
-        services.MockDatabaseTransactions<ApplicationDbContext>();
+        services.MockDatabaseTransactions<CloudbbDbContext>();
         // since we're not running in a full WebApplication context, we need to register the configuration and some required services manually
         services.AddSingleton(configuration);
         services.AddLogging(logging => logging.AddConsole());
@@ -39,7 +39,7 @@ public sealed class IntegrationTestDbInitializer : IAsyncDITestInitializer
     public static async ValueTask InitializeAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(serviceProvider);
-        await using ApplicationDbContext context = serviceProvider.GetRequiredService<ApplicationDbContext>();
+        await using CloudbbDbContext context = serviceProvider.GetRequiredService<CloudbbDbContext>();
         await context.Database.EnsureDeletedAsync(cancellationToken);
         await context.Database.MigrateAsync(cancellationToken);
         await serviceProvider.InitializeTestDatabaseAsync<IntegrationTestDbLoader>(cancellationToken);

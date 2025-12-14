@@ -15,7 +15,7 @@ namespace Cloudbb.Web.Api.V1.Models.Posts;
 /// <param name="UserVote">Current authenticated user's vote state on this post.</param>
 /// <param name="LastModified">Timestamp of the most recent modification (creation or edit).</param>
 /// <param name="Revisions">Total number of revisions made to this post. Will be at least 1.</param>
-/// <param name="CanEdit">Whether the authenticated user has permission to edit this post.</param>
+/// <param name="CanEdit">Whether the authenticated user has permission to edit this post. If false, edit options should be hidden and voting be enabled (cannot vote on own post).</param>
 /// <param name="Comments">Collection of comments on this post, included only when requested.</param>
 public sealed record PostReadResponse
 (
@@ -29,5 +29,5 @@ public sealed record PostReadResponse
     DateTime LastModified,
     int Revisions,
     bool CanEdit,
-    ICollection<CommentListResponseEntry>? Comments
+    ICollection<CommentResponseEntry>? Comments
 );

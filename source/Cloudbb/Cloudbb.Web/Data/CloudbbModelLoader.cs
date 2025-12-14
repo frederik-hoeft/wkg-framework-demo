@@ -11,4 +11,4 @@ namespace Cloudbb.Web.Data;
 // see https://github.com/WKG-Software-GmbH/wkg-entity-framework-core/blob/main/docs/documentation.md#source-generator-discovery
 // TODO: .NET 10 release not yet mirrored to GitHub.
 [ModelLoader(AssemblyDiscoveryFailureBehavior = AssemblyDiscoveryFailureBehavior.Error, TargetAssemblies = ["Cloudbb.Web"])]
-internal sealed partial class ApplicationModelLoader;
+internal sealed partial class CloudbbModelLoader;
