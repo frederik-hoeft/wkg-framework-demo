@@ -17,9 +17,11 @@ namespace Cloudbb.Web.Api.V1.Controllers;
 public sealed partial class PostsController(ITransactionServiceHandle transactionService, IUserClaimIndex userClaims) 
     : CloudbbControllerBase(transactionService, userClaims)
 {
+    private static readonly TimeZone s_defaultTimeZone = new();
+
     public partial Task<IActionResult> GetPostsAsync(PostListRequest request, CancellationToken cancellationToken) => Transaction.Scoped.RunReadOnlyAsync<IActionResult>(async (dbContext, ct) =>
     {
-        if (!TryValidateContext(request, out IActionResult? errorResult, out Guid _))
+        if (!TryValidateContext(request, out IActionResult? errorResult, out Guid _)) 
         {
             return errorResult;
         }
@@ -30,7 +32,7 @@ public sealed partial class PostsController(ITransactionServiceHandle transactio
         {
             return BadRequest($"PageNumber must be between 1 and {maxPageNumber}.");
         }
-        TimeZoneInfo tzinfo = request.TimeZone.GetTimeZoneInfo();
+        TimeZoneInfo tzinfo = (request.TimeZone ?? s_defaultTimeZone).GetTimeZoneInfo();
         var query = dbContext.Set<CloudbbPost>().AsNoTracking()
             // subselect to get latest revision per post
             .Select(post => new
@@ -94,7 +96,7 @@ public sealed partial class PostsController(ITransactionServiceHandle transactio
         {
             return errorResult;
         }
-        TimeZoneInfo tzinfo = request.TimeZone.GetTimeZoneInfo();
+        TimeZoneInfo tzinfo = (request.TimeZone ?? s_defaultTimeZone).GetTimeZoneInfo();
 
         PostReadResponse? post = await dbContext.Set<CloudbbPost>().AsNoTracking()
             // subselect to get latest revision per post
