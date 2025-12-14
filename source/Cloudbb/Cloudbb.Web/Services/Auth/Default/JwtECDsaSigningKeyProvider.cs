@@ -13,9 +13,11 @@ internal sealed class JwtECDsaSigningKeyProvider(IJwtECDsaSigningKeyImportServic
     // ECDsa instance implements IDisposable, so we need to keep a reference to it to dispose of it later
     private volatile ECDsa? _ecdsa;
     private volatile ECDsaSecurityKey? _key;
+    private bool _disposed;
 
     public async ValueTask<SecurityKey> GetKeyAsync(CancellationToken cancellationToken = default)
     {
+        ObjectDisposedException.ThrowIf(_disposed, this);
         // lazy init with double-check locking
         ECDsaSecurityKey? key = _key;
         if (key is not null)
@@ -42,6 +44,7 @@ internal sealed class JwtECDsaSigningKeyProvider(IJwtECDsaSigningKeyImportServic
 
     public void Dispose()
     {
+        _disposed = true;
         // dispose the lock, any waiters will be cancelled, and anything touching the lock after dispose will get ObjectDisposedException
         _asyncLock.Dispose();
         _ecdsa?.Dispose();

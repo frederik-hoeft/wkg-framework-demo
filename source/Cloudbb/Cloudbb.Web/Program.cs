@@ -1,17 +1,20 @@
+using Cloudbb.Web.Data;
+using Cloudbb.Web.Services.Auth;
+using Cloudbb.Web.Services.Auth.Default;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
-using System.Text;
-using Cloudbb.Web.Data;
-using Cloudbb.Web.Services.Auth;
-using Cloudbb.Web.Services.Auth.Default;
-using Wkg.AspNetCore.Transactions.Configuration;
 using System.Data;
+using System.Text;
+using Wkg.AspNetCore.Transactions.Configuration;
+using Wkg.EntityFrameworkCore.Configuration;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
 // Add Entity Framework
+// use source-generated model discovery for better startup performance and compile-time model validation
+builder.Services.AddSingleton<IModelLoader, ApplicationModelLoader>();
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DatabaseConnection")));
 
@@ -57,6 +60,7 @@ builder.Services.AddAuthentication(options =>
 });
 
 builder.Services.AddAuthorization();
+builder.Services.AddHttpContextAccessor();
 
 builder.Services.AddTransactionManagement<ApplicationDbContext>(transactionOptions => transactionOptions
     .UseIsolationLevel(IsolationLevel.ReadCommitted));
@@ -66,10 +70,11 @@ builder.Services.AddTransactionManagement<ApplicationDbContext>(transactionOptio
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // auth services
-//builder.Services.AddSingleton<IJwtECDsaSigningKeyImportService, JwtECDsaPemFileSigningKeyImportService>();
-builder.Services.AddSingleton<IJwtAlgorithmProvider, JwtHmacSha256AlgorithmProvider>();
-builder.Services.AddSingleton<IJwtSigningKeyProvider, JwtSymmetricSigningKeyProvider>();
+builder.Services.AddSingleton<IJwtAlgorithmProvider, JwtEcdsaSha256AlgorithmProvider>();
+builder.Services.AddSingleton<IJwtECDsaSigningKeyImportService, JwtECDsaPemFileSigningKeyImportService>();
+builder.Services.AddSingleton<IJwtSigningKeyProvider, JwtECDsaSigningKeyProvider>();
 builder.Services.AddScoped<IJwtService, JwtService>();
+builder.Services.AddScoped<IUserClaimIndex, UserClaimIndex>();
 builder.Services.AddSingleton<ITimingRandomizationService, CsprngTimingRandomizationService>();
 
 builder.Services.AddControllers();

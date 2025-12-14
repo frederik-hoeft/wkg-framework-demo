@@ -88,3 +88,9 @@ Sessionx.vim
 *~
 tags
 [._]*.un~
+
+# keys and certificates
+*.pfx
+*.cer
+*.key
+*.pem
