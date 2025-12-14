@@ -10,8 +10,20 @@ using Wkg.EntityFrameworkCore.Extensions;
 
 namespace Cloudbb.Web.Data;
 
+/// <summary>
+/// Primary Entity Framework DbContext for the Cloudbb application.
+/// Integrates ASP.NET Core Identity with domain entities and enforces strict mapping policies
+/// to ensure explicit entity configuration and maintain architectural boundaries.
+/// </summary>
+/// <param name="options">Database context configuration options.</param>
+/// <param name="modelLoader">Service for discovering and loading entity configurations.</param>
 public sealed class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options, IModelLoader modelLoader) : IdentityDbContext<IdentityUser>(options)
 {
+    /// <summary>
+    /// Configures the database model with strict policies for entity naming, property mapping,
+    /// and inheritance validation. Ensures all domain entities follow architectural patterns.
+    /// </summary>
+    /// <param name="builder">The model builder used to configure entity relationships and constraints.</param>
     protected override void OnModelCreating(ModelBuilder builder)
     {
         ArgumentNullException.ThrowIfNull(builder);

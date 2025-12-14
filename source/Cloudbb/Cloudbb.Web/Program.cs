@@ -1,10 +1,15 @@
+using Asp.Versioning;
+using Asp.Versioning.ApiExplorer;
+using Cloudbb.Web.Configuration.Swagger;
 using Cloudbb.Web.Data;
 using Cloudbb.Web.Services.Auth;
 using Cloudbb.Web.Services.Auth.Default;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
+using Swashbuckle.AspNetCore.SwaggerUI;
 using System.Data;
 using System.Text;
 using Wkg.AspNetCore.Transactions.Configuration;
@@ -78,15 +83,34 @@ builder.Services.AddScoped<IUserClaimIndex, UserClaimIndex>();
 builder.Services.AddSingleton<ITimingRandomizationService, CsprngTimingRandomizationService>();
 
 builder.Services.AddControllers();
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
-builder.Services.AddOpenApi();
+builder.Services.AddApiVersioning(options =>
+{
+    options.AssumeDefaultVersionWhenUnspecified = true;
+    options.DefaultApiVersion = new ApiVersion(1, 0);
+    options.ReportApiVersions = true;
+}).AddApiExplorer(options =>
+{
+    options.GroupNameFormat = "'v'VVV";
+    options.SubstituteApiVersionInUrl = true;
+});
+builder.Services.AddSwaggerGen();
+builder.Services.ConfigureOptions<ConfigureSwaggerOptions>();
 
 WebApplication app = builder.Build();
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
-    app.MapOpenApi();
+    IApiVersionDescriptionProvider versionDescriptionProvider = app.Services.GetRequiredService<IApiVersionDescriptionProvider>();
+    app.UseSwagger();
+    app.UseSwaggerUI(swagger =>
+    {
+        swagger.EnableDeepLinking();
+        foreach (ApiVersionDescription description in versionDescriptionProvider.ApiVersionDescriptions)
+        {
+            swagger.SwaggerEndpoint($"/swagger/{description.GroupName}/swagger.json", description.GroupName.ToUpperInvariant());
+        }
+    });
     app.UseDeveloperExceptionPage();
 }
 

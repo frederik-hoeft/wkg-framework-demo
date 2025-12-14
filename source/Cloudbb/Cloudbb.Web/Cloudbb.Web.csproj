@@ -1,36 +1,40 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.Web">
-	<PropertyGroup>
-		<TargetFramework>net10.0</TargetFramework>
-		<Nullable>enable</Nullable>
-		<ImplicitUsings>enable</ImplicitUsings>
-		<UserSecretsId>02764e65-d84b-4cdc-a049-1786ce0c9fbd</UserSecretsId>
-		<DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
-		<!-- CI injected versioning -->
-		<VersionPrefix>0.0.0</VersionPrefix>
-		<VersionSuffix>CI-INJECTED</VersionSuffix>
-	</PropertyGroup>
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <Nullable>enable</Nullable>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <UserSecretsId>02764e65-d84b-4cdc-a049-1786ce0c9fbd</UserSecretsId>
+        <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
+		<GenerateDocumentationFile>true</GenerateDocumentationFile>
+        <!-- CI injected versioning -->
+        <VersionPrefix>0.0.0</VersionPrefix>
+        <VersionSuffix>CI-INJECTED</VersionSuffix>
+    </PropertyGroup>
 
-	<ItemGroup>
-		<PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.0" />
-		<PackageReference Include="Microsoft.AspNetCore.Diagnostics.EntityFrameworkCore" Version="10.0.0" />
-		<PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="10.0.0" />
-		<PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.0" />
-		<PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.0" />
-		<PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.15.0" />
-		<PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="10.0.0">
-			<PrivateAssets>all</PrivateAssets>
-			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-		</PackageReference>
-		<PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.23.0" />
-		<PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.0" />
-		<PackageReference Include="Wkg" Version="10.0.18957-rc" />
-		<PackageReference Include="Wkg.AspNetCore" Version="10.0.18971-rc" />
-		<PackageReference Include="Wkg.EntityFrameworkCore" Version="10.0.18979-rc" />
-		<!-- TODO: replace with Wkg.EntityFrameworkCore.Discovery.SourceGeneration once it has cleared internal review -->
-		<!-- TODO: (unofficial preview package) remove once official package is available -->
+    <ItemGroup>
+        <PackageReference Include="Asp.Versioning.Mvc" Version="8.1.0" />
+        <PackageReference Include="Asp.Versioning.Mvc.ApiExplorer" Version="8.1.0" />
+        <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.0" />
+        <PackageReference Include="Microsoft.AspNetCore.Diagnostics.EntityFrameworkCore" Version="10.0.0" />
+        <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="10.0.0" />
+        <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.0" />
+        <PackageReference Include="Swashbuckle.AspNetCore" Version="10.0.1" />
+        <PackageReference Include="Swashbuckle.AspNetCore.Annotations" Version="10.0.1" />
+        <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.15.0" />
+        <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="10.0.0">
+            <PrivateAssets>all</PrivateAssets>
+            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+        </PackageReference>
+        <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.23.0" />
+        <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.0" />
+        <PackageReference Include="Wkg" Version="10.0.18957-rc" />
+        <PackageReference Include="Wkg.AspNetCore" Version="10.0.18971-rc" />
+        <PackageReference Include="Wkg.EntityFrameworkCore" Version="10.0.18979-rc" />
+        <!-- TODO: replace with Wkg.EntityFrameworkCore.Discovery.SourceGeneration once it has cleared internal review -->
+        <!-- TODO: (unofficial preview package) remove once official package is available -->
 		<PackageReference Include="019af44d1e9c73358e4519cf0d08516d" Version="10.0.18980" >
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
-	</ItemGroup>
+    </ItemGroup>
 </Project>
