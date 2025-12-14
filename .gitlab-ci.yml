@@ -138,7 +138,7 @@ deploy-native-container-image:
       set -euvo pipefail
       # only set latest tag for main branch builds
       if [ "$CI_COMMIT_REF_SLUG" != "main" ]; then
-        /kaniko/executor --context "${DOCKER_CONTEXT_PATH}" --dockerfile "${DOCKERFILE_PATH}" --destination "${CI_REGISTRY_IMAGE}-aot:${VERSION}"
+        /kaniko/executor --context "${DOCKER_CONTEXT_PATH}" --dockerfile "${DOCKERFILE_PATH}" --destination "${CI_REGISTRY_IMAGE}:${VERSION}-aot"
       else
-        /kaniko/executor --context "${DOCKER_CONTEXT_PATH}" --dockerfile "${DOCKERFILE_PATH}" --destination "${CI_REGISTRY_IMAGE}-aot:${VERSION}" --destination "${CI_REGISTRY_IMAGE}-aot:latest"
+        /kaniko/executor --context "${DOCKER_CONTEXT_PATH}" --dockerfile "${DOCKERFILE_PATH}" --destination "${CI_REGISTRY_IMAGE}:${VERSION}-aot" --destination "${CI_REGISTRY_IMAGE}:latest-aot"
       fi
