@@ -13,7 +13,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Prometheus;
 using System.Data;
-using System.Net;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Wkg.AspNetCore.Configuration;
