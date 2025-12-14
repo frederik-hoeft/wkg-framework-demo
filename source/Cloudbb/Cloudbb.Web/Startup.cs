@@ -5,6 +5,8 @@ using Cloudbb.Web.Data;
 using Cloudbb.Web.Services.Auth;
 using Cloudbb.Web.Services.Auth.Default;
 using Cloudbb.Web.Services.Auth.Policies;
+using Cloudbb.Web.Services.Versioning;
+using Cloudbb.Web.Services.Versioning.Default;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Identity;
@@ -59,8 +61,8 @@ internal sealed class Startup : IAsyncStartupScript
             options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
         }).AddJwtBearer(options =>
         {
-            JwtECDsaPemFileSigningKeyImportService keyImportService = new(configuration);
-            JwtECDsaSigningKeyProvider keyLoader = new(keyImportService);
+            JwtRsaPemFileSigningKeyImportService keyImportService = new(configuration);
+            JwtRsaSigningKeyProvider keyLoader = new(keyImportService);
             Task<SecurityKey> keyTask = keyLoader.GetKeyAsync().AsTask();
             keyTask.Wait();
             options.TokenValidationParameters = new TokenValidationParameters
@@ -91,12 +93,13 @@ internal sealed class Startup : IAsyncStartupScript
         //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
         // auth services
-        services.AddSingleton<IJwtAlgorithmProvider, JwtEcdsaSha256AlgorithmProvider>();
-        services.AddSingleton<IJwtECDsaSigningKeyImportService, JwtECDsaPemFileSigningKeyImportService>();
-        services.AddSingleton<IJwtSigningKeyProvider, JwtECDsaSigningKeyProvider>();
+        services.AddSingleton<IJwtAlgorithmProvider, RsaSha256AlgorithmProvider>();
+        services.AddSingleton<IJwtRsaSigningKeyImportService, JwtRsaPemFileSigningKeyImportService>();
+        services.AddSingleton<IJwtSigningKeyProvider, JwtRsaSigningKeyProvider>();
         services.AddScoped<IJwtService, JwtService>();
         services.AddScoped<IUserClaimIndex, UserClaimIndex>();
         services.AddSingleton<ITimingRandomizationService, CsprngTimingRandomizationService>();
+        services.AddSingleton<IVersionProvider, CloudbbWebVersionProvider>();
 
         services.AddControllers().AddJsonOptions(options =>
         {
