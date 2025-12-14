@@ -18,8 +18,7 @@ public sealed class PostReadRequest
     /// <summary>
     /// User's timezone for proper timestamp localization in the response.
     /// </summary>
-    [Required] 
-    public required TimeZone TimeZone { get; set; }
+    public TimeZone? TimeZone { get; set; }
 
     /// <summary>
     /// Whether to include the comment thread with the post data.

@@ -80,7 +80,7 @@ public sealed partial class PostsController(ITransactionServiceHandle transactio
         {
             return errorResult;
         }
-        TimeZoneInfo tzinfo = request.TimeZone.GetTimeZoneInfo();
+        TimeZoneInfo tzinfo = (request.TimeZone ?? s_defaultTimeZone).GetTimeZoneInfo();
 
         PostReadResponse? post = await dbContext.Set<CloudbbPost>().AsNoTracking()
             // subselect to get latest revision per post
