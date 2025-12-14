@@ -6,10 +6,19 @@ namespace Cloudbb.Web.Api.V1.Models.Posts;
 /// Request payload for creating a new post in the Cloudbb forum.
 /// Contains the essential content required to author a forum post.
 /// </summary>
-/// <param name="Title">The post title, limited to 256 characters for readability and database efficiency.</param>
-/// <param name="Content">The main body content of the post, supporting rich text or markdown.</param>
-public record PostCreationRequest
-(
-    [Required][StringLength(256)] string Title,
-    [Required] string Content
-);
+public sealed class PostCreationRequest
+{
+    /// <summary>
+    /// The post title, limited to 256 characters for readability and database efficiency.
+    /// </summary>
+    [Required]
+    [StringLength(256, MinimumLength = 1)] 
+    public required string Title { get; set; }
+
+    /// <summary>
+    /// The main body content of the post, supporting rich text or markdown.
+    /// </summary>
+    [Required]
+    [MinLength(1)]
+    public required string Content { get; set; }
+}

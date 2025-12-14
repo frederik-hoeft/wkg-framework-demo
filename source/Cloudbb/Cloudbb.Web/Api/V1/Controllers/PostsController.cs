@@ -1,9 +1,13 @@
+using Cloudbb.Web.Api.V1.Models;
+using Cloudbb.Web.Api.V1.Models.Comments;
 using Cloudbb.Web.Api.V1.Models.Posts;
 using Cloudbb.Web.Data;
 using Cloudbb.Web.Data.Model;
 using Cloudbb.Web.Services.Auth;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Data;
+using System.Diagnostics.CodeAnalysis;
 using Wkg.AspNetCore.Abstractions.Controllers;
 using Wkg.AspNetCore.Transactions;
 
@@ -18,19 +22,41 @@ public sealed partial class PostsController
     IUserClaimIndex userClaims
 ) : DatabaseController<ApplicationDbContext>(transactionService)
 {
-    public partial Task<IActionResult> GetPostsAsync(string? tz, TimeSpan? tzoffset, CancellationToken cancellationToken) => Transaction.Scoped.RunReadOnlyAsync<IActionResult>(async (dbContext, ct) =>
+    public partial Task<IActionResult> GetPostsAsync(PostListRequest request, CancellationToken cancellationToken) => Transaction.Scoped.RunReadOnlyAsync<IActionResult>(async (dbContext, ct) =>
     {
-        TimeZoneInfo tzinfo = ParseUserLocalTime(tz, tzoffset);
-        List<PostListEntry> posts = await dbContext.Set<CloudbbPost>()
+        if (!TryValidateContext(request, out IActionResult? errorResult, out Guid _))
+        {
+            return errorResult;
+        }
+        TimeZoneInfo tzinfo = request.TimeZone.GetTimeZoneInfo();
+        var query = dbContext.Set<CloudbbPost>().AsNoTracking()
             // subselect to get latest revision per post
             .Select(post => new
             {
                 Post = post,
-                // invariant: posts always have at least one revision
-                LatestRevision = post.Revisions.OrderByDescending(rev => rev.CreationTime).First(),
-            })
+                // invariant: posts always have at least one revision.
+                // since UUIDv7 is time-ordered, we can use Id for ordering instead of the non-indexed CreationTime
+                LatestRevision = post.Revisions.OrderByDescending(rev => rev.Id).First(),
+                // post score is the sum of all vote values (+1 for upvote, -1 for downvote)
+                VoteScore = post.Votes.Select(vote => vote.Value).Sum()
+            });
+
+        // apply sorting
+        query = (request.SortOrder, request.SortMode) switch
+        {
+            // uuidv7 is time-ordered, so ordering by id is equivalent to ordering by creation time
+            (SortOrder.Ascending, PostListSortMode.Activity) => query.OrderBy(postEntry => postEntry.LatestRevision.Id),
+            (SortOrder.Descending, PostListSortMode.Activity) => query.OrderByDescending(postEntry => postEntry.LatestRevision.Id),
+            (SortOrder.Ascending, PostListSortMode.Score) => query.OrderBy(postEntry => postEntry.VoteScore).ThenBy(postEntry => postEntry.LatestRevision.Id),
+            _ => query.OrderByDescending(postEntry => postEntry.VoteScore).ThenByDescending(postEntry => postEntry.LatestRevision.Id),
+        };
+
+        List<PostListResponseEntry> posts = await query
+            // apply pagination
+            .Skip((request.PageNumber - 1) * request.PageSize)
+            .Take(request.PageSize)
             // construct result entries
-            .Select(postInfo => new PostListEntry
+            .Select(postInfo => new PostListResponseEntry
             (
                 postInfo.Post.Id,
                 postInfo.Post.UserId,
@@ -39,30 +65,87 @@ public sealed partial class PostsController
                 postInfo.LatestRevision.Content.Length <= 512
                     ? postInfo.LatestRevision.Content
                     : postInfo.LatestRevision.Content.Substring(0, 512),
-                // post score is the sum of all vote values (+1 for upvote, -1 for downvote)
-                postInfo.Post.Votes.Select(vote => vote.Value).Sum(),
+                postInfo.VoteScore,
                 // convert database UTC time to provided timezone
                 TimeZoneInfo.ConvertTimeFromUtc(postInfo.LatestRevision.CreationTime, tzinfo),
-                // a post is considered edited if it has more than one revision
-                postInfo.Post.Revisions.Count > 1
+                postInfo.Post.Revisions.Count
             ))
             .ToListAsync(ct);
+
         return Ok(new PostListResponse(posts));
+    }, cancellationToken);
+
+    public partial Task<IActionResult> GetPostAsync(PostReadRequest request, CancellationToken cancellationToken) => Transaction.Scoped.RunReadOnlyAsync(async (dbContext, ct) =>
+    {
+        if (!TryValidateContext(request, out IActionResult? errorResult, out Guid userId))
+        {
+            return errorResult;
+        }
+        TimeZoneInfo tzinfo = request.TimeZone.GetTimeZoneInfo();
+
+        PostReadResponse? post = await dbContext.Set<CloudbbPost>().AsNoTracking()
+            // subselect to get latest revision per post
+            .Select(post => new
+            {
+                Post = post,
+                // invariant: posts always have at least one revision
+                LatestRevision = post.Revisions.OrderByDescending(rev => rev.Id).First(),
+            })
+            .Where(postInfo => postInfo.Post.Id == request.PostId)
+            // construct result
+            .Select(postInfo => new PostReadResponse
+            (
+                postInfo.Post.Id,
+                postInfo.Post.UserId,
+                postInfo.Post.User.Username,
+                postInfo.LatestRevision.Title,
+                postInfo.LatestRevision.Content,
+                // post score is the sum of all vote values (+1 for upvote, -1 for downvote)
+                postInfo.Post.Votes.Select(vote => vote.Value).Sum(),
+                // user's vote on this post (+1,-1), or None (0) if the user hasn't voted
+                (VoteType)postInfo.Post.Votes
+                    .Where(vote => vote.UserId == userId)
+                    .Select(vote => vote.Value)
+                    .FirstOrDefault(),
+                // convert database UTC time to provided timezone
+                TimeZoneInfo.ConvertTimeFromUtc(postInfo.LatestRevision.CreationTime, tzinfo),
+                postInfo.Post.Revisions.Count,
+                // user can edit if they are the author of the post
+                postInfo.Post.UserId == userId,
+                request.IncludeComments
+                    ? postInfo.Post.Comments.Select(comment => new CommentListResponseEntry
+                    (
+                        comment.Id,
+                        comment.PostId,
+                        comment.UserId,
+                        comment.User.Username,
+                        // comment score is the sum of all vote values (+1 for upvote, -1 for downvote)
+                        comment.Votes.Select(vote => vote.Value).Sum(),
+                        // user's vote on this comment (+1,-1), or None (0) if the user hasn't voted
+                        (VoteType)comment.Votes
+                            .Where(vote => vote.UserId == userId)
+                            .Select(vote => vote.Value)
+                            .FirstOrDefault(),
+                        comment.Content,
+                        // convert database UTC time to provided timezone
+                        TimeZoneInfo.ConvertTimeFromUtc(comment.CreationTime, tzinfo)
+                    )).ToList()
+                    : null
+            ))
+            .FirstOrDefaultAsync(ct);
+        if (post is null)
+        {
+            return NotFound();
+        }
+        return Ok(post);
     }, cancellationToken);
 
     public partial Task<IActionResult> CreatePostAsync(PostCreationRequest request, CancellationToken cancellationToken) => Transaction.Scoped.RunAsync(async (dbContext, transaction, ct) =>
     {
-        ArgumentNullException.ThrowIfNull(request);
-        if (!ModelState.IsValid)
+        if (!TryValidateContext(request, out IActionResult? errorResult, out Guid userId))
         {
-            return transaction.Rollback(BadRequest(ModelState));
+            return transaction.Rollback(errorResult);
         }
-        if (!userClaims.TryGetUserId(out Guid userId))
-        {
-            // honestly, should never happen. the auth middleware should catch this
-            return transaction.Rollback(Unauthorized());
-        }
-
         CloudbbPost post = new()
         {
             Revisions = [new CloudbbPostRevision(request.Title, request.Content)],
@@ -75,26 +158,142 @@ public sealed partial class PostsController
         return transaction.Commit(Ok(response));
     }, cancellationToken);
 
-    private static TimeZoneInfo ParseUserLocalTime(string? tz = null, TimeSpan? tzoffset = null)
+    public partial Task<IActionResult> EditPostAsync(PostEditRequest request, CancellationToken cancellationToken) => Transaction.Scoped.RunAsync(async (dbContext, transaction, ct) =>
     {
-        if (!string.IsNullOrEmpty(tz))
+        if (!TryValidateContext(request, out IActionResult? errorResult, out Guid userId))
         {
-            try
+            return transaction.Rollback(errorResult);
+        }
+        CloudbbPost? post = await dbContext.Set<CloudbbPost>().AsNoTracking()
+            .FirstOrDefaultAsync(p => p.Id == request.PostId, ct);
+        if (post is null)
+        {
+            return transaction.Rollback(NotFound());
+        }
+        if (post.UserId != userId)
+        {
+            return transaction.Rollback(Forbid());
+        }
+        CloudbbPostRevision revision = new(request.Title, request.Content)
+        {
+            PostId = post.Id
+        };
+        dbContext.Add(revision);
+        await dbContext.SaveChangesAsync(ct);
+        PostEditResponse result = new(post.Id);
+        return transaction.Commit(Ok(result));
+    }, cancellationToken);
+
+    public partial Task<IActionResult> DeletePostAsync(PostDeleteRequest request, CancellationToken cancellationToken) => Transaction.Scoped.RunAsync(async (dbContext, transaction, ct) =>
+    {
+        if (!TryValidateContext(request, out IActionResult? errorResult, out Guid userId))
+        {
+            return transaction.Rollback(errorResult);
+        }
+        CloudbbPost? post = await dbContext.Set<CloudbbPost>()
+            .FirstOrDefaultAsync(p => p.Id == request.PostId, ct);
+        if (post is null)
+        {
+            return transaction.Rollback(NotFound());
+        }
+        if (post.UserId != userId)
+        {
+            return transaction.Rollback(Forbid());
+        }
+        // cascade delete will handle related revisions, comments, votes, etc.
+        dbContext.Remove(post);
+        await dbContext.SaveChangesAsync(ct);
+        return transaction.Commit(Ok());
+    }, cancellationToken);
+
+    public partial Task<IActionResult> VotePostAsync(PostVoteRequest request, CancellationToken cancellationToken) => Transaction.Scoped.RunAsync(async (dbContext, transaction, ct) =>
+    {
+        if (!TryValidateContext(request, out IActionResult? errorResult, out Guid userId))
+        {
+            return transaction.Rollback(errorResult);
+        }
+        // get the post along with any existing vote by this user
+        CloudbbPost? post = await dbContext.Set<CloudbbPost>()
+            .Include(p => p.Votes.Where(vote => vote.UserId == userId))
+            .FirstOrDefaultAsync(p => p.Id == request.PostId, ct);
+        if (post is null)
+        {
+            return transaction.Rollback(NotFound());
+        }
+        if (post.UserId == userId)
+        {
+            // users cannot vote on their own posts
+            return transaction.Rollback(Forbid());
+        }
+        if (post.Votes is [var existingVote, ..])
+        {
+            // update existing vote
+            if (request.VoteType == VoteType.NoVote)
             {
-                return TimeZoneInfo.FindSystemTimeZoneById(tz);
+                // remove vote
+                dbContext.Remove(existingVote);
             }
-            catch (Exception e) when (e is TimeZoneNotFoundException or InvalidTimeZoneException) { }
+            else
+            {
+                existingVote.Value = (int)request.VoteType;
+                dbContext.Update(existingVote);
+            }
         }
-        // normalize offset
-        TimeSpan offset = TimeSpan.Zero;
-        if (tzoffset is { } value)
+        else
         {
-            offset = new TimeSpan(value.Hours, value.Minutes, 0);
+            // create new vote
+            CloudbbPostVote newVote = new()
+            {
+                PostId = post.Id,
+                UserId = userId,
+                Value = (int)request.VoteType
+            };
+            dbContext.Add(newVote);
         }
-        if (offset == TimeSpan.Zero)
+        await dbContext.SaveChangesAsync(ct);
+        // just fully refresh from database as a source of ground truth
+        PostVoteResponse? response = await dbContext.Set<CloudbbPost>().AsNoTracking()
+            .Where(p => p.Id == post.Id)
+            .Select(p => new PostVoteResponse
+            (
+                p.Id,
+                // recalculate post score
+                p.Votes.Select(vote => vote.Value).Sum(),
+                // user's vote on this post (+1,-1), or None (0) if the user hasn't voted
+                (VoteType)p.Votes
+                    .Where(vote => vote.UserId == userId)
+                    .Select(vote => vote.Value)
+                    .FirstOrDefault()
+            ))
+            // isolation level read committed => non-repeatable read possible, post may have been deleted
+            .FirstOrDefaultAsync(ct);
+        if (response is null)
         {
-            return TimeZoneInfo.Utc;
+            return transaction.Rollback(NotFound());
         }
-        return TimeZoneInfo.CreateCustomTimeZone("Custom", offset, "Custom", "Custom");
+        return transaction.Commit(Ok(response));
+    }, cancellationToken);
+
+    private bool TryValidateContext<TRequest>([NotNullWhen(true)] TRequest? request, [NotNullWhen(false)] out IActionResult? errorResult, out Guid userId)
+    {
+        errorResult = null;
+        userId = Guid.Empty;
+        if (request is null)
+        {
+            errorResult = BadRequest("Request body cannot be null");
+            return false;
+        }
+        if (!ModelState.IsValid)
+        {
+            errorResult = BadRequest(ModelState);
+            return false;
+        }
+        if (!userClaims.TryGetUserId(out userId))
+        {
+            // honestly, should never happen. the auth middleware should catch this
+            errorResult = Unauthorized();
+            return false;
+        }
+        return true;
     }
 }

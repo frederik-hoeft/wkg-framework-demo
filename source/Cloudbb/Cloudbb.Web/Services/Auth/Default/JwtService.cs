@@ -18,7 +18,7 @@ internal sealed class JwtService(IConfiguration configuration, IJwtSigningKeyPro
         Claim[] claims =
         [
             new(ClaimTypes.NameIdentifier, user.Id.ToString()),
-            new(ClaimTypes.Name, user.UserName),
+            new(ClaimTypes.Name, user.Username),
             new(ClaimTypes.Email, user.Email),
             new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
             new(JwtRegisteredClaimNames.Iat, DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString(), ClaimValueTypes.Integer64),
@@ -47,7 +47,7 @@ internal sealed class JwtService(IConfiguration configuration, IJwtSigningKeyPro
             ValidateAudience = true,
             ValidAudience = configuration["Auth:Jwt:Audience"],
             ValidateLifetime = true,
-            ClockSkew = TimeSpan.Zero
+            ClockSkew = TimeSpan.Parse(configuration["Auth:Jwt:ClockSkew"]!),
         };
         ClaimsPrincipal principal = _tokenHandler.ValidateToken(token, validationParameters, out _);
         return principal;

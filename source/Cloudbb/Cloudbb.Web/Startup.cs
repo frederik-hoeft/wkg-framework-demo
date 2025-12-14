@@ -1,0 +1,151 @@
+﻿using Asp.Versioning;
+using Asp.Versioning.ApiExplorer;
+using Cloudbb.Web.Configuration.Swagger;
+using Cloudbb.Web.Data;
+using Cloudbb.Web.Services.Auth;
+using Cloudbb.Web.Services.Auth.Default;
+using Cloudbb.Web.Services.Auth.Policies;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using System.Data;
+using System.Text.Json;
+using System.Text.Json.Serialization;
+using Wkg.AspNetCore.Configuration;
+using Wkg.AspNetCore.Transactions.Configuration;
+using Wkg.EntityFrameworkCore.Configuration;
+
+namespace Cloudbb.Web;
+
+internal sealed class Startup : IAsyncStartupScript
+{
+    public static ValueTask ConfigureServicesAsync(IServiceCollection services, IConfiguration configuration, CancellationToken cancellationToken = default)
+    {
+        // Add Entity Framework
+        // use source-generated model discovery for better startup performance and compile-time model validation
+        services.AddSingleton<IModelLoader, ApplicationModelLoader>();
+        services.AddDbContext<ApplicationDbContext>(options =>
+            options.UseNpgsql(configuration.GetConnectionString("DatabaseConnection")));
+
+        // Add Identity services
+        services.AddIdentity<IdentityUser, IdentityRole>(options =>
+        {
+            // Password settings
+            options.Password.RequiredLength = 16;
+            options.Password.RequireDigit = true;
+            options.Password.RequireLowercase = true;
+            options.Password.RequireUppercase = true;
+            options.Password.RequireNonAlphanumeric = false;
+
+            // Lockout settings
+            options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(5);
+            options.Lockout.MaxFailedAccessAttempts = 5;
+            options.Lockout.AllowedForNewUsers = true;
+
+            // User settings
+            options.User.RequireUniqueEmail = true;
+            options.SignIn.RequireConfirmedEmail = false;
+        })
+        .AddEntityFrameworkStores<ApplicationDbContext>()
+        .AddDefaultTokenProviders();
+
+        // Add JWT Authentication
+        services.AddAuthentication(options =>
+        {
+            options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+            options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+            options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
+        }).AddJwtBearer(options =>
+        {
+            JwtECDsaPemFileSigningKeyImportService keyImportService = new(configuration);
+            JwtECDsaSigningKeyProvider keyLoader = new(keyImportService);
+            Task<SecurityKey> keyTask = keyLoader.GetKeyAsync().AsTask();
+            keyTask.Wait();
+            options.TokenValidationParameters = new TokenValidationParameters
+            {
+                ValidateIssuer = true,
+                ValidateAudience = true,
+                ValidateLifetime = true,
+                ValidIssuer = configuration["Auth:Jwt:Issuer"],
+                ValidAudience = configuration["Auth:Jwt:Audience"],
+                IssuerSigningKey = keyTask.Result,
+                ClockSkew = TimeSpan.Parse(configuration["Auth:Jwt:ClockSkew"]!),
+            };
+        });
+
+        services.AddAuthorizationBuilder()
+            .AddPolicy(AuthPolicies.User.Name, policy => policy.RequireRole(AuthPolicies.User.Roles))
+            .AddPolicy(AuthPolicies.Admin.Name, policy => policy.RequireRole(AuthPolicies.Admin.Roles));
+
+        services.AddHttpContextAccessor();
+
+        services.AddTransactionManagement<ApplicationDbContext>(transactionOptions => transactionOptions
+            .UseIsolationLevel(IsolationLevel.ReadCommitted));
+
+        //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+        //                                            Register application services                                                 //
+        //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+        // auth services
+        services.AddSingleton<IJwtAlgorithmProvider, JwtEcdsaSha256AlgorithmProvider>();
+        services.AddSingleton<IJwtECDsaSigningKeyImportService, JwtECDsaPemFileSigningKeyImportService>();
+        services.AddSingleton<IJwtSigningKeyProvider, JwtECDsaSigningKeyProvider>();
+        services.AddScoped<IJwtService, JwtService>();
+        services.AddScoped<IUserClaimIndex, UserClaimIndex>();
+        services.AddSingleton<ITimingRandomizationService, CsprngTimingRandomizationService>();
+
+        services.AddControllers().AddJsonOptions(options =>
+        {
+            JsonNamingPolicy namingPolicy = JsonNamingPolicy.CamelCase;
+
+            JsonStringEnumConverter enumConverter = new(namingPolicy);
+            options.JsonSerializerOptions.Converters.Add(enumConverter);
+            options.JsonSerializerOptions.PropertyNamingPolicy = namingPolicy;
+            options.JsonSerializerOptions.WriteIndented = true;
+        });
+        services.AddApiVersioning(options =>
+        {
+            options.AssumeDefaultVersionWhenUnspecified = true;
+            options.DefaultApiVersion = new ApiVersion(1, 0);
+            options.ReportApiVersions = true;
+        }).AddApiExplorer(options =>
+        {
+            options.GroupNameFormat = "'v'VVV";
+            options.SubstituteApiVersionInUrl = true;
+        });
+        services.AddSwaggerGen();
+        services.ConfigureOptions<ConfigureSwaggerOptions>();
+        return ValueTask.CompletedTask;
+    }
+
+    public static async ValueTask ConfigureAsync(WebApplication app, CancellationToken cancellationToken = default)
+    {
+        // Configure the HTTP request pipeline.
+        if (app.Environment.IsDevelopment())
+        {
+            IApiVersionDescriptionProvider versionDescriptionProvider = app.Services.GetRequiredService<IApiVersionDescriptionProvider>();
+            app.UseSwagger();
+            app.UseSwaggerUI(swagger =>
+            {
+                swagger.EnableDeepLinking();
+                foreach (ApiVersionDescription description in versionDescriptionProvider.ApiVersionDescriptions)
+                {
+                    swagger.SwaggerEndpoint($"/swagger/{description.GroupName}/swagger.json", description.GroupName.ToUpperInvariant());
+                }
+            });
+            app.UseDeveloperExceptionPage();
+        }
+
+        app.UseHttpsRedirection();
+
+        app.UseAuthentication();
+        app.UseAuthorization();
+
+        app.MapControllers();
+
+        await using AsyncServiceScope scope = app.Services.CreateAsyncScope();
+        await using ApplicationDbContext context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        await context.Database.MigrateAsync(cancellationToken);
+    }
+}

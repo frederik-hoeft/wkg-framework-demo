@@ -25,6 +25,10 @@ internal sealed class ConfigureSwaggerOptions(IApiVersionDescriptionProvider pro
         options.IncludeXmlComments(fullPath, includeControllerXmlComments: true);
         options.SupportNonNullableReferenceTypes();
         options.SchemaFilter<AllowedValuesAttributeFilter>();
+        options.SchemaFilter<DefaultValueAttributeFilter>();
+        options.SchemaFilter<ExampleValueAttributeFilter>();
+        options.SchemaFilter<RangeAttributeFilter>();
+        options.SchemaFilter<TimeSpanTypeFilter>();
         options.SchemaFilter<ValidUrlAttributeFilter>();
         options.SchemaFilter<ValidEmailAddressAttributeFilter>();
         options.SchemaFilter<ValidPhoneNumberAttributeFilter>();

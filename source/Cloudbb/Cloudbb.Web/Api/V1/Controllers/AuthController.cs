@@ -2,6 +2,8 @@
 using Cloudbb.Web.Data;
 using Cloudbb.Web.Data.Model;
 using Cloudbb.Web.Services.Auth;
+using Cloudbb.Web.Services.Auth.Policies;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -41,7 +43,7 @@ public sealed partial class AuthController(
             return transaction.Rollback(BadRequest(AuthResponse.Failure(string.Join("; ", result.Errors.Select(e => e.Description)))));
         }
         // assign default user role
-        await userManager.AddToRoleAsync(identityUser, "user");
+        await userManager.AddToRoleAsync(identityUser, AuthRoles.USER);
         CloudbbUser user = new(identityUser);
         dbContext.Add(user);
         await dbContext.SaveChangesAsync(ct);

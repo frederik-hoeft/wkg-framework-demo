@@ -1,6 +1,7 @@
-﻿using Microsoft.OpenApi;
+﻿using Cloudbb.Web.Configuration.Swagger.Attributes;
+using Cloudbb.Web.Configuration.Swagger.Filters.Extensions;
+using Microsoft.OpenApi;
 using Swashbuckle.AspNetCore.SwaggerGen;
-using System.Reflection;
 using Wkg.AspNetCore.Validation;
 using Wkg.Data.Validation;
 
@@ -10,11 +11,11 @@ internal sealed class ValidUrlAttributeFilter : ISchemaFilter
 {
     public void Apply(IOpenApiSchema schema, SchemaFilterContext context)
     {
-        if (context.MemberInfo is PropertyInfo pinfo && schema is OpenApiSchema writableSchema)
+        if (schema is OpenApiSchema writableSchema && context.HasAttribute<ValidUrlAttribute>())
         {
-            if (pinfo.GetCustomAttribute<ValidUrlAttribute>() is not null)
+            writableSchema.Pattern = DataValidationService.Url.Pattern;
+            if (!context.HasAttribute<ExampleValueAttribute>())
             {
-                writableSchema.Pattern = DataValidationService.Url.Pattern;
                 writableSchema.Example = "https://example.com";
             }
         }

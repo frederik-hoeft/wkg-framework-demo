@@ -35,7 +35,7 @@ public sealed class CloudbbUser() : CloudbbEntity, IDiscoverableModelConfigurati
         IdentityUser = identityUser;
         IdentityUserId = identityUser.Id;
         Email = email;
-        UserName = userName;
+        Username = userName;
     }
 
     /// <summary>
@@ -48,7 +48,7 @@ public sealed class CloudbbUser() : CloudbbEntity, IDiscoverableModelConfigurati
     /// The user's display name in the forum, synchronized with the Identity username.
     /// Used for post attribution and user identification in the forum interface.
     /// </summary>
-    public required string UserName { get; set; }
+    public required string Username { get; set; }
 
     /// <summary>
     /// Foreign key linking to the ASP.NET Core Identity user.
@@ -66,13 +66,13 @@ public sealed class CloudbbUser() : CloudbbEntity, IDiscoverableModelConfigurati
     /// Collection of forum posts authored by this user.
     /// Supports lazy loading and tracks user's contribution history.
     /// </summary>
-    public ICollection<CloudbbPost> Posts { get; set; } = null!;
+    public List<CloudbbPost> Posts { get; set; } = null!;
 
     /// <summary>
     /// Collection of comments authored by this user across all forum posts.
     /// Enables tracking of user engagement and comment history.
     /// </summary>
-    public ICollection<CloudbbComment> Comments { get; set; } = null!;
+    public List<CloudbbComment> Comments { get; set; } = null!;
 
     /// <inheritdoc />
     public static void Configure(EntityTypeBuilder<CloudbbUser> self)
@@ -87,7 +87,7 @@ public sealed class CloudbbUser() : CloudbbEntity, IDiscoverableModelConfigurati
             .HasMaxLength(254)
             .IsRequired();
 
-        self.Property(my => my.UserName)
+        self.Property(my => my.Username)
             .HasColumnName("username")
             .HasColumnType("varchar")
             .HasMaxLength(32)
@@ -100,7 +100,7 @@ public sealed class CloudbbUser() : CloudbbEntity, IDiscoverableModelConfigurati
             .IsRequired();
 
         self.HasIndex(my => my.Email, "idx_users_email").IsUnique();
-        self.HasIndex(my => my.UserName, "idx_users_username").IsUnique();
+        self.HasIndex(my => my.Username, "idx_users_username").IsUnique();
 
         self.HasOne(my => my.IdentityUser)
             .WithOne()

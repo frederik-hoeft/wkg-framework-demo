@@ -33,7 +33,7 @@ internal sealed class UserClaimIndex(IHttpContextAccessor httpContextAccessor) :
         return TryGetClaim(ClaimTypes.NameIdentifier, out string? userIdString) && Guid.TryParse(userIdString, out userId);
     }
 
-    public bool TryGetUsername([NotNullWhen(true)] out string? userName) => TryGetClaim(ClaimTypes.Name, out userName);
+    public bool TryGetUsername([NotNullWhen(true)] out string? username) => TryGetClaim(ClaimTypes.Name, out username);
 
     public bool TryGetClaim(string claimType, [NotNullWhen(true)] out string? claimValue)
     {
