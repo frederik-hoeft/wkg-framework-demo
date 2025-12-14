@@ -6,6 +6,8 @@ using Wkg.Versioning;
 
 WebApplicationBuilder builder = WebApplication.CreateSlimBuilder(args);
 
+builder.Logging.AddJsonConsole(options => options.IncludeScopes = true);
+
 builder.Services.ConfigureHttpJsonOptions(options => options.SerializerOptions.TypeInfoResolverChain.Insert(0, AppJsonSerializerContext.Default));
 
 builder.Services.AddOpenApi();
