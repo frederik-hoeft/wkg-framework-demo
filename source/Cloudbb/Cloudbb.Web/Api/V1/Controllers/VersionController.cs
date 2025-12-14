@@ -6,7 +6,8 @@ using Wkg.Versioning;
 namespace Cloudbb.Web.Api.V1.Controllers;
 
 /// <summary>
-/// Provides endpoints for managing posts.
+/// Provides endpoints for retrieving application version and diagnostic information.
+/// Essential for client compatibility verification, deployment tracking, and operational monitoring.
 /// </summary>
 public sealed partial class VersionController(IVersionProvider versionProvider) : ControllerBase
 {

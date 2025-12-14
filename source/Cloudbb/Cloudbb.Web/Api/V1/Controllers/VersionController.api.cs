@@ -9,6 +9,11 @@ namespace Cloudbb.Web.Api.V1.Controllers;
 [Route("api/v{version:apiVersion}/version")]
 public partial class VersionController
 {
+    /// <summary>
+    /// Retrieves the current application version information including build date and pre-release status.
+    /// Used for diagnostic purposes, client compatibility checks, and operational monitoring.
+    /// </summary>
+    /// <returns>Version details including semantic version string, UTC build timestamp, and release status.</returns>
     [HttpGet]
     [ProducesResponseType<GetVersionResponse>(StatusCodes.Status200OK)]
     public partial GetVersionResponse GetVersion();
