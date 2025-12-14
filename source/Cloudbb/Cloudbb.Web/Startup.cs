@@ -6,6 +6,7 @@ using Cloudbb.Web.Services.Auth;
 using Cloudbb.Web.Services.Auth.Default;
 using Cloudbb.Web.Services.Auth.Policies;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -83,6 +84,8 @@ internal sealed class Startup : IAsyncStartupScript
         services.AddTransactionManagement<CloudbbDbContext>(transactionOptions => transactionOptions
             .UseIsolationLevel(IsolationLevel.ReadCommitted));
 
+        services.AddHealthChecks();
+
         //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
         //                                            Register application services                                                 //
         //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -143,6 +146,7 @@ internal sealed class Startup : IAsyncStartupScript
         app.UseAuthorization();
 
         app.MapControllers();
+        app.MapHealthChecks("/health");
 
         await using AsyncServiceScope scope = app.Services.CreateAsyncScope();
         await using CloudbbDbContext context = scope.ServiceProvider.GetRequiredService<CloudbbDbContext>();
