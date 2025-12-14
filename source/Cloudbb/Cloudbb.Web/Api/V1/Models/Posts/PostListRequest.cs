@@ -12,8 +12,7 @@ public sealed class PostListRequest
     /// <summary>
     /// User's timezone for proper timestamp localization.
     /// </summary>
-    [Required] 
-    public required TimeZone TimeZone { get; set; }
+    public TimeZone? TimeZone { get; set; }
 
     /// <summary>
     /// Page number to retrieve (1-based indexing, minimum 1).

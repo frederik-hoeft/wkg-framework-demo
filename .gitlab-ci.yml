@@ -52,9 +52,9 @@ integration-tests:
         POSTGRES_PASSWORD: postgres
   before_script:
     - *base_before_script
-    # set up ECDSA keys for JWT signing
+    # set up RSA keys for JWT signing
     - apk add --no-cache openssl
-    - openssl ecparam -out /tmp/Cloudbb.Web.Tests.Integration.ecdsa_key.pem -name prime256v1 -genkey
+    - openssl genrsa -out /tmp/Cloudbb.Web.Tests.Integration.rsa_key.pem 2048
   script:
     - dotnet test "${SOURCE_CODE_PATH}/Cloudbb.Web.Tests.Integration" --no-restore
 
@@ -109,4 +109,36 @@ deploy-container-image:
         /kaniko/executor --context "${DOCKER_CONTEXT_PATH}" --dockerfile "${DOCKERFILE_PATH}" --destination "${CI_REGISTRY_IMAGE}:${VERSION}"
       else
         /kaniko/executor --context "${DOCKER_CONTEXT_PATH}" --dockerfile "${DOCKERFILE_PATH}" --destination "${CI_REGISTRY_IMAGE}:${VERSION}" --destination "${CI_REGISTRY_IMAGE}:latest"
+      fi
+
+deploy-native-container-image:
+  stage: deploy
+  image:
+    name: gcr.io/kaniko-project/executor:v1.23.0-debug
+    entrypoint: ["/busybox/sh", "-c"]
+  needs:
+    - construct-version
+  variables:
+    DOCKER_CONTEXT_PATH: "${SOURCE_CODE_PATH}"
+    DOCKERFILE_PATH: "${SOURCE_CODE_PATH}/Cloudbb.Web.Aot/Dockerfile"
+  script:
+    - export VERSION="$(cat app/version.txt)"
+    - |
+      if [ -z "$VERSION" ]; then
+        echo "Version file was empty!"
+        exit 1
+      fi
+    # inject version info into build context
+    - echo "${VERSION}" | tee "${DOCKER_CONTEXT_PATH}/CI_VERSION_INFO"
+    - mkdir -p /kaniko/.docker
+    - |
+      set -euvo pipefail
+      echo "{\"auths\":{\"$CI_REGISTRY\":{\"auth\":\"$(printf "%s:%s" "${CI_REGISTRY_USER}" "${CI_REGISTRY_PASSWORD}" | base64 | tr -d '\n')\"}}}" > /kaniko/.docker/config.json
+    - |
+      set -euvo pipefail
+      # only set latest tag for main branch builds
+      if [ "$CI_COMMIT_REF_SLUG" != "main" ]; then
+        /kaniko/executor --context "${DOCKER_CONTEXT_PATH}" --dockerfile "${DOCKERFILE_PATH}" --destination "${CI_REGISTRY_IMAGE}:${VERSION}-aot"
+      else
+        /kaniko/executor --context "${DOCKER_CONTEXT_PATH}" --dockerfile "${DOCKERFILE_PATH}" --destination "${CI_REGISTRY_IMAGE}:${VERSION}-aot" --destination "${CI_REGISTRY_IMAGE}:latest-aot"
       fi
