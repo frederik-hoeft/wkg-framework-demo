@@ -17,13 +17,16 @@ namespace Cloudbb.Web.Api.V1.Controllers;
 public sealed partial class PostsController(ITransactionServiceHandle transactionService, IUserClaimIndex userClaims) 
     : CloudbbControllerBase(transactionService, userClaims)
 {
+    private static readonly TimeZone s_defaultTimeZone = new();
+
     public partial Task<IActionResult> GetPostsAsync(PostListRequest request, CancellationToken cancellationToken) => Transaction.Scoped.RunReadOnlyAsync<IActionResult>(async (dbContext, ct) =>
     {
         if (!TryValidateContext(request, out IActionResult? errorResult, out Guid _))
         {
             return errorResult;
         }
-        TimeZoneInfo tzinfo = request.TimeZone.GetTimeZoneInfo();
+        // tz is nullable here because we have a default
+        TimeZoneInfo tzinfo = (request.TimeZone ?? s_defaultTimeZone).GetTimeZoneInfo();
         var query = dbContext.Set<CloudbbPost>().AsNoTracking()
             // subselect to get latest revision per post
             .Select(post => new
