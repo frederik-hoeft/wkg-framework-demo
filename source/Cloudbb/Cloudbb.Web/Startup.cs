@@ -8,11 +8,12 @@ using Cloudbb.Web.Services.Auth.Policies;
 using Cloudbb.Web.Services.Versioning;
 using Cloudbb.Web.Services.Versioning.Default;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Prometheus;
 using System.Data;
+using System.Net;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Wkg.AspNetCore.Configuration;
@@ -150,6 +151,12 @@ internal sealed class Startup : IAsyncStartupScript
 
         app.MapControllers();
         app.MapHealthChecks("/health");
+
+        app.UseHttpMetrics(options => options.ConfigureMeasurements(measurementOptions =>
+            // Only measure exemplar if the HTTP response status code is not "OK".
+            measurementOptions.ExemplarPredicate = context => context.Response.StatusCode is not StatusCodes.Status200OK));
+
+        app.MapMetrics("/metrics");
 
         await using AsyncServiceScope scope = app.Services.CreateAsyncScope();
         await using CloudbbDbContext context = scope.ServiceProvider.GetRequiredService<CloudbbDbContext>();

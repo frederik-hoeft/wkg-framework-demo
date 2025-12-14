@@ -52,9 +52,9 @@ integration-tests:
         POSTGRES_PASSWORD: postgres
   before_script:
     - *base_before_script
-    # set up ECDSA keys for JWT signing
+    # set up RSA keys for JWT signing
     - apk add --no-cache openssl
-    - openssl ecparam -out /tmp/Cloudbb.Web.Tests.Integration.ecdsa_key.pem -name prime256v1 -genkey
+    - openssl genrsa -out /tmp/Cloudbb.Web.Tests.Integration.rsa_key.pem 2048
   script:
     - dotnet test "${SOURCE_CODE_PATH}/Cloudbb.Web.Tests.Integration" --no-restore
 
