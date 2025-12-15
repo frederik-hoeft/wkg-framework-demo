@@ -36,7 +36,7 @@ public sealed class CommentsController_VoteCommentTests : ControllerBaseTest<Com
         OkObjectResult ok = Assert.IsInstanceOfType<OkObjectResult>(result);
         CommentVoteResponse response = Assert.IsInstanceOfType<CommentVoteResponse>(ok.Value);
         
-        Assert.AreEqual(IntegrationTestDbLoader.Post1OfUser1Id, response.CommentId);
+        Assert.AreEqual(request.CommentId, response.CommentId);
         Assert.AreEqual(VoteType.Upvote, response.UserVote);
         Assert.AreEqual(1, response.NewScore); // Should be 1 (existing vote from test data was removed in our setup)
 
@@ -64,7 +64,7 @@ public sealed class CommentsController_VoteCommentTests : ControllerBaseTest<Com
         OkObjectResult ok = Assert.IsInstanceOfType<OkObjectResult>(result);
         CommentVoteResponse response = Assert.IsInstanceOfType<CommentVoteResponse>(ok.Value);
         
-        Assert.AreEqual(IntegrationTestDbLoader.Post1OfUser1Id, response.CommentId);
+        Assert.AreEqual(request.CommentId, response.CommentId);
         Assert.AreEqual(VoteType.Downvote, response.UserVote);
         Assert.AreEqual(-1, response.NewScore); // Should be -1
 
@@ -104,7 +104,7 @@ public sealed class CommentsController_VoteCommentTests : ControllerBaseTest<Com
             OkObjectResult ok = Assert.IsInstanceOfType<OkObjectResult>(result);
             CommentVoteResponse response = Assert.IsInstanceOfType<CommentVoteResponse>(ok.Value);
             
-            Assert.AreEqual(IntegrationTestDbLoader.Post1OfUser1Id, response.CommentId);
+            Assert.AreEqual(request.CommentId, response.CommentId);
             Assert.AreEqual(VoteType.NoVote, response.UserVote);
             Assert.AreEqual(0, response.NewScore); // Should be 0 after removing vote
 
@@ -199,7 +199,7 @@ public sealed class CommentsController_VoteCommentTests : ControllerBaseTest<Com
             OkObjectResult ok = Assert.IsInstanceOfType<OkObjectResult>(result);
             CommentVoteResponse response = Assert.IsInstanceOfType<CommentVoteResponse>(ok.Value);
             
-            Assert.AreEqual(IntegrationTestDbLoader.Post1OfUser1Id, response.CommentId);
+            Assert.AreEqual(request.CommentId, response.CommentId);
             Assert.AreEqual(VoteType.Downvote, response.UserVote);
             Assert.AreEqual(-1, response.NewScore); // Should be -1 after changing from upvote
 
