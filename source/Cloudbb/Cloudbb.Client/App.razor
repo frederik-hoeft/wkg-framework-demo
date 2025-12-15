@@ -1,0 +1,32 @@
+﻿<CascadingAuthenticationState>
+    <MudThemeProvider />
+    <MudPopoverProvider />
+    <MudDialogProvider />
+    <MudSnackbarProvider />
+    
+    <Router AppAssembly="@typeof(App).Assembly">
+        <Found Context="routeData">
+            <AuthorizeView>
+                <Authorized>
+                    <RouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)"/>
+                    <FocusOnNavigate RouteData="@routeData" Selector="h1" />
+                </Authorized>
+                <NotAuthorized>
+                    <RouteView RouteData="@routeData" DefaultLayout="@typeof(Layout.AuthLayout)" />
+                    <FocusOnNavigate RouteData="@routeData" Selector="h1" />
+                </NotAuthorized>
+            </AuthorizeView>
+        </Found>
+        <NotFound>
+            <LayoutView Layout="@typeof(MainLayout)">
+                <MudContainer MaxWidth="MaxWidth.Medium" Class="mt-16 text-center">
+                    <MudText Typo="Typo.h3" Class="mb-4">Not Found</MudText>
+                    <MudText Typo="Typo.body1">Sorry, the content you are looking for does not exist.</MudText>
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" Class="mt-4" Href="/">
+                        Go to Home
+                    </MudButton>
+                </MudContainer>
+            </LayoutView>
+        </NotFound>
+    </Router>
+</CascadingAuthenticationState>

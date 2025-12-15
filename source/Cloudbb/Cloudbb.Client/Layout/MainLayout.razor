@@ -1,0 +1,67 @@
+﻿@using Cloudbb.Client.Services.Auth
+@using Cloudbb.Client.Components
+@inherits LayoutComponentBase
+@inject IAuthService AuthService
+@inject NavigationManager Navigation
+
+<MudLayout>
+    <MudAppBar Elevation="1" Color="Color.Primary">
+        <MudIconButton Icon="Icons.Material.Filled.Menu" Color="Color.Inherit" OnClick="@ToggleDrawer" />
+        <MudText Typo="Typo.h6">Cloudbb Forum</MudText>
+        <MudSpacer />
+        <AuthorizeView>
+            <Authorized>
+                <TimeZoneSelector />
+                <MudThemeProvider @ref="_mudThemeProvider" @bind-IsDarkMode="_isDarkMode" Theme="_theme" />
+                <MudSwitch @bind-Value="_isDarkMode" Class="ma-4" T="bool" ThumbIcon="@DarkModeIcon" ThumbIconColor="Color.Primary" />
+                <MudText Class="mr-3">Welcome, @context.User.Identity?.Name</MudText>
+                <MudButton Color="Color.Inherit" OnClick="Logout">Logout</MudButton>
+            </Authorized>
+        </AuthorizeView>
+    </MudAppBar>
+    
+    <MudDrawer @bind-Open="_drawerOpen" Elevation="1" Variant="@DrawerVariant.Mini" OpenMiniOnHover="true">
+        <NavMenu />
+    </MudDrawer>
+    
+    <MudMainContent Class="pt-16 px-16">
+        <MudContainer MaxWidth="MaxWidth.Large">
+            @Body
+        </MudContainer>
+    </MudMainContent>
+
+    <MudAppBar Bottom="true" Color="Color.Surface" Class="justify-center">
+        <MudText Typo="Typo.body2" Color="Color.Inherit">
+            Cloudbb Blazor WebAssembly Client <br />
+            v@(CloudbbClient.VersionInfo.VersionString) &mdash; @CloudbbClient.VersionInfo.BuildDateUtc.ToString("g")</MudText>
+    </MudAppBar>
+</MudLayout>
+
+@code {
+    private bool _drawerOpen = true;
+    private MudTheme _theme = new();
+    private bool _isDarkMode = false;
+    private MudThemeProvider? _mudThemeProvider;
+
+    private string DarkModeIcon => _isDarkMode ? Icons.Material.Filled.DarkMode : Icons.Material.Filled.LightMode;
+
+    private void ToggleDrawer()
+    {
+        _drawerOpen = !_drawerOpen;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && _mudThemeProvider is not null)
+        {
+            _isDarkMode = await _mudThemeProvider.GetSystemDarkModeAsync();
+            StateHasChanged();
+        }
+    }
+
+    private async Task Logout()
+    {
+        await AuthService.LogoutAsync();
+        Navigation.NavigateTo("/");
+    }
+}

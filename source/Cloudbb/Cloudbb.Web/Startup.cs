@@ -5,13 +5,11 @@ using Cloudbb.Web.Data;
 using Cloudbb.Web.Services.Auth;
 using Cloudbb.Web.Services.Auth.Default;
 using Cloudbb.Web.Services.Auth.Policies;
-using Cloudbb.Web.Services.Versioning;
-using Cloudbb.Web.Services.Versioning.Default;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
-using Prometheus;
 using System.Data;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -86,8 +84,6 @@ internal sealed class Startup : IAsyncStartupScript
         services.AddTransactionManagement<CloudbbDbContext>(transactionOptions => transactionOptions
             .UseIsolationLevel(IsolationLevel.ReadCommitted));
 
-        services.AddHealthChecks();
-
         //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
         //                                            Register application services                                                 //
         //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -99,7 +95,6 @@ internal sealed class Startup : IAsyncStartupScript
         services.AddScoped<IJwtService, JwtService>();
         services.AddScoped<IUserClaimIndex, UserClaimIndex>();
         services.AddSingleton<ITimingRandomizationService, CsprngTimingRandomizationService>();
-        services.AddSingleton<IVersionProvider, CloudbbWebVersionProvider>();
 
         services.AddControllers().AddJsonOptions(options =>
         {
@@ -110,6 +105,15 @@ internal sealed class Startup : IAsyncStartupScript
             options.JsonSerializerOptions.PropertyNamingPolicy = namingPolicy;
             options.JsonSerializerOptions.WriteIndented = true;
         });
+
+        // Add CORS support for Blazor client
+        string[] allowedOrigins = configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
+            ?? throw new InvalidOperationException("Cors:AllowedOrigins configuration is missing.");
+        services.AddCors(options => options.AddPolicy("BlazorClient", policy => policy
+            .WithOrigins(allowedOrigins)
+            .AllowAnyMethod()
+            .AllowAnyHeader()
+            .AllowCredentials()));
         services.AddApiVersioning(options =>
         {
             options.AssumeDefaultVersionWhenUnspecified = true;
@@ -128,34 +132,31 @@ internal sealed class Startup : IAsyncStartupScript
     public static async ValueTask ConfigureAsync(WebApplication app, CancellationToken cancellationToken = default)
     {
         // Configure the HTTP request pipeline.
+        IApiVersionDescriptionProvider versionDescriptionProvider = app.Services.GetRequiredService<IApiVersionDescriptionProvider>();
+        app.UseSwagger();
+        app.UseSwaggerUI(swagger =>
+        {
+            swagger.EnableDeepLinking();
+            foreach (ApiVersionDescription description in versionDescriptionProvider.ApiVersionDescriptions)
+            {
+                swagger.SwaggerEndpoint($"/swagger/{description.GroupName}/swagger.json", description.GroupName.ToUpperInvariant());
+            }
+        });
+
         if (app.Environment.IsDevelopment())
         {
-            IApiVersionDescriptionProvider versionDescriptionProvider = app.Services.GetRequiredService<IApiVersionDescriptionProvider>();
-            app.UseSwagger();
-            app.UseSwaggerUI(swagger =>
-            {
-                swagger.EnableDeepLinking();
-                foreach (ApiVersionDescription description in versionDescriptionProvider.ApiVersionDescriptions)
-                {
-                    swagger.SwaggerEndpoint($"/swagger/{description.GroupName}/swagger.json", description.GroupName.ToUpperInvariant());
-                }
-            });
             app.UseDeveloperExceptionPage();
         }
 
         app.UseHttpsRedirection();
 
+        // Enable CORS
+        app.UseCors("BlazorClient");
+
         app.UseAuthentication();
         app.UseAuthorization();
 
         app.MapControllers();
-        app.MapHealthChecks("/health");
-
-        app.UseHttpMetrics(options => options.ConfigureMeasurements(measurementOptions =>
-            // Only measure exemplar if the HTTP response status code is not "OK".
-            measurementOptions.ExemplarPredicate = context => context.Response.StatusCode is not StatusCodes.Status200OK));
-
-        app.MapMetrics("/metrics");
 
         await using AsyncServiceScope scope = app.Services.CreateAsyncScope();
         await using CloudbbDbContext context = scope.ServiceProvider.GetRequiredService<CloudbbDbContext>();

@@ -2,29 +2,32 @@
 
 ## Project Overview
 
-ASP.NET Core 10.0 Web API with Identity authentication, JWT tokens, PostgreSQL database via Entity Framework Core, and GitLab CI/CD. The project follows strict coding standards emphasizing explicit typing and readability.
+Full-stack ASP.NET Core 10.0 Web API with Blazor WebAssembly frontend, using Identity authentication, JWT tokens, PostgreSQL database via Entity Framework Core. The project follows strict coding standards emphasizing explicit typing and readability.
 
 ## Architecture & Structure
 
 ### Core Components
 
 - **`source/Cloudbb/Cloudbb.Web/`** - Main web API project with versioned controllers (`Api/V1/Controllers/`)
-- **`Data/ApplicationDbContext.cs`** - EF Core context with Identity integration, enforces explicit entity/property mapping policies
+- **`source/Cloudbb/Cloudbb.Client/`** - Blazor WebAssembly SPA with MudBlazor UI, JWT authentication
+- **`Data/CloudbbDbContext.cs`** - EF Core context with Identity integration, enforces explicit entity/property mapping policies
 - **`Data/Model/`** - Domain entities (CloudbbUser extends Identity, CloudbbPost/Comment with voting system)
-- **`Services/Auth/`** - Interface-driven JWT authentication services with ECDSA signing
-- **`Configuration/`** - API versioning, Swagger configuration with grouped endpoints
+- **`Services/Auth/`** - Interface-driven JWT authentication services with RSA signing
+- **`Configuration/`** - API versioning, Swagger configuration, CORS for Blazor client
 - **`source/Cloudbb/Cloudbb.Web.Tests/`** - Unit tests using MSTest v4 with Moq
 - **`source/Cloudbb/Cloudbb.Web.Tests.Integration/`** - Integration tests with PostgreSQL test database
 
 ### Technology Stack
 
 - **.NET 10.0** with nullable reference types enabled globally
+- **Blazor WebAssembly** SPA with MudBlazor UI components, JWT authentication, local storage
 - **PostgreSQL** via Npgsql.EntityFrameworkCore.PostgreSQL with source-generated model discovery
-- **ASP.NET Core Identity** with JWT Bearer authentication (zero clock skew)
-- **Entity Framework Core** with auto-apply migrations on startup
+- **ASP.NET Core Identity** with JWT Bearer authentication using authentication/authorization middleware
+- **Entity Framework Core** with auto-apply migrations on startup, source-generated model discovery (`Wkg.EntityFrameworkCore.Discovery.SourceGeneration`)
 - **MSTest.Sdk/4.0.1** for testing with Moq 4.20.72
 - **API Versioning** with grouped Swagger docs in Development
-- **GitLab CI/CD** with staged builds, unit tests, and integration tests
+- **CORS** configured for Blazor client cross-origin requests (`BlazorClient` policy)
+- **Transaction Management** via `Wkg.AspNetCore.Transactions` with ReadCommitted isolation
 
 ## Critical Coding Standards
 
@@ -66,7 +69,8 @@ dotnet ef database update
 ```bash
 # Standard commands from solution root
 dotnet build source/Cloudbb/Cloudbb.slnx
-dotnet run --project source/Cloudbb/Cloudbb.Web
+dotnet run --project source/Cloudbb/Cloudbb.Web  # API server
+dotnet run --project source/Cloudbb/Cloudbb.Client  # Blazor client dev server
 dotnet test source/Cloudbb/Cloudbb.Web.Tests
 dotnet test source/Cloudbb/Cloudbb.Web.Tests.Integration
 ```
@@ -79,9 +83,9 @@ All business services implement interfaces for testability:
 
 ```csharp
 // Service registration pattern in Program.cs
-builder.Services.AddSingleton<IJwtAlgorithmProvider, JwtEcdsaSha256AlgorithmProvider>();
-builder.Services.AddSingleton<IJwtECDsaSigningKeyImportService, JwtECDsaPemFileSigningKeyImportService>();
-builder.Services.AddSingleton<IJwtSigningKeyProvider, JwtECDsaSigningKeyProvider>();
+builder.Services.AddSingleton<IJwtAlgorithmProvider, RsaSha256AlgorithmProvider>();
+builder.Services.AddSingleton<IJwtRsaSigningKeyImportService, JwtRsaPemFileSigningKeyImportService>();
+builder.Services.AddSingleton<IJwtSigningKeyProvider, JwtRsaSigningKeyProvider>();
 builder.Services.AddScoped<IJwtService, JwtService>();
 
 // Interface definition pattern
@@ -93,10 +97,21 @@ public interface IJwtService
 
 ### Authentication Architecture
 
-- **JWT with ECDSA signing** (ES256) for production security via PEM key files
-- **Zero clock skew** validation: `ClockSkew = TimeSpan.Zero`
+- **JWT with RSA signing** (RS256) for production security via PEM key files
 - **Claims-based** with `NameIdentifier`, `Name`, `Email`, `Role`, `Jti`, `Iat`
 - **Global authorization** with `[Authorize]` on controllers
+- **CORS integration** for Blazor client (`BlazorClient` policy for ports 7089/5097)
+
+## Client Development
+
+### Blazor WebAssembly Client
+
+- **Project**: `source/Cloudbb/Cloudbb.Client/` - Blazor WASM with MudBlazor
+- **Authentication**: JWT stored in localStorage, `JwtAuthenticationStateProvider` for auth state
+- **Services**: `AuthService` for login/register, HTTP clients with Bearer token injection
+- **UI Components**: MudBlazor for responsive design, timezone management, real-time voting
+- **Pages**: Forum views (Home, Posts, PostDetail, CreatePost, EditPost) with pagination/sorting
+- **API Integration**: Structured DTOs matching server API, automatic JSON serialization
 
 ## Testing Patterns
 
@@ -150,11 +165,11 @@ public sealed class ServiceNameTests
 - **Test database**: Separate PostgreSQL instance for integration tests
 - **GitLab CI**: Uses `postgres:18-trixie` service container
 - **Database initialization**: `IntegrationTestDbInitializer` and `DatabaseInitializer`
-- **Component testing**: `ComponentIntegrationTest` base class for end-to-end scenarios
+- **Component testing**: `TransactionalControllerTest` base class for end-to-end scenarios
 
 ### Integration Test Patterns
 
-**CRITICAL**: Integration tests use `Wkg.AspNetCore.TestAdapters` which provides automatic transaction rollback for each test scope, regardless of whether tested services attempt to commit transactions through Wkg.AspNetCore.
+**CRITICAL**: Integration tests use `Wkg.AspNetCore.TestAdapters` which provides automatic transaction rollback for each test scope, regardless of whether tested services attempt to commit transactions.
 
 #### Controller Integration Tests
 
@@ -165,6 +180,12 @@ Follow this established pattern for controller tests:
 public sealed class ControllerName_ActionTests : ControllerBaseTest<ControllerName>
 {
     public override TestContext TestContext { get; set; }
+
+    protected async override ValueTask InitializeComponentAsync(ControllerName component, IServiceProvider serviceProvider, CancellationToken cancellationToken)
+    {
+        await base.InitializeComponentAsync(component, serviceProvider, cancellationToken);
+        await SetAuthenticatedUserContextAsync(component, serviceProvider, IntegrationTestDbLoader.TestUser1, cancellationToken);
+    }
 
     [TestMethod]
     // Passing the request through UsingComponentAsync enables automatic model validation for the request object.
@@ -181,7 +202,11 @@ public sealed class ControllerName_ActionTests : ControllerBaseTest<ControllerNa
         Assert.IsNotNull(result);
         OkObjectResult ok = Assert.IsInstanceOfType<OkObjectResult>(result);
         ResponseType response = Assert.IsInstanceOfType<ResponseType>(ok.Value);
-        // Additional assertions...
+        
+        // Verify database changes if needed
+        CloudbbDbContext dbContext = serviceProvider.GetRequiredService<CloudbbDbContext>();
+        SomeEntity? entity = await dbContext.Set<SomeEntity>().FindAsync(response.Id, ct);
+        Assert.IsNotNull(entity);
     }, TestContext.CancellationToken);
 }
 ```
@@ -238,9 +263,10 @@ public Task SimpleOperation_ShouldWork() => UsingComponentAsync(async (controlle
 
 #### Key Integration Test Guidelines
 
-- **Inherit from**: `ControllerBaseTest<TController>` for API controllers, `ComponentIntegrationTest<TComponent>` for services
+- **Inherit from**: `ControllerBaseTest<TController>` for API controllers
+- **Authentication**: Use `SetAuthenticatedUserContextAsync(controller, serviceProvider, testUser, ct)` to set user context
 - **File naming**: `ControllerName_ActionTests.cs` for controller actions
-- **Test data**: Use `IntegrationTestDbLoader` for global pre-seeded data, inline data for test-specific needs
+- **Test data**: Use `IntegrationTestDbLoader` static properties for pre-seeded test data
 - **Async pattern**: Always return `Task` from test methods, use `TestContext.CancellationToken`
 - **Database isolation**: Each test runs in its own transaction scope that auto-rolls back
 - **Service access**: Use `serviceProvider.GetRequiredService<T>()` to access registered services
@@ -270,9 +296,10 @@ builder.LoadModels(modelLoader, modelOptions => modelOptions
 ## Key Files for Context
 
 ### Essential Reading
-- **`Program.cs`** - Service registration, JWT config, middleware pipeline
+- **`Program.cs`** - Service registration, JWT config, middleware pipeline  
+- **`Startup.cs`** - Detailed service configuration and application setup
 - **`code-style.md`** - Complete coding standards (MUST READ before coding)
-- **`Data/ApplicationDbContext.cs`** - EF Core policies and model loading
+- **`Data/CloudbbDbContext.cs`** - EF Core policies and model loading
 - **`add-migration.sh`** - Custom migration script with PascalCase validation
 - **`_friends.cs`** - Test access configuration
 
@@ -282,13 +309,11 @@ builder.LoadModels(modelLoader, modelOptions => modelOptions
 - **Connection strings**: `DatabaseConnection` for PostgreSQL (`cloudbb`/`cloudbb_dev`)
 - **JWT settings**: `Auth:Jwt:*` configuration keys
 
-## CI/CD Pipeline
-
-### GitLab CI Stages
-- **Build**: `dotnet build` with dependency caching
-- **Unit Tests**: `dotnet test Cloudbb.Web.Tests` 
-- **Integration Tests**: `dotnet test Cloudbb.Web.Tests.Integration` with PostgreSQL service
-- **Caching**: NuGet packages and build artifacts cached per stage/branch
-- **Environment**: Uses `mcr.microsoft.com/dotnet/sdk:10.0-alpine` image
-
 When adding features, maintain strict interface-driven design, follow the explicit typing rules, register all services in `Program.cs` with appropriate lifetimes, and write comprehensive MSTest v4 tests with mocked dependencies.
+
+## Client-Server Integration
+
+### API Contract Reference
+
+- **Authentication**: Use JWT Bearer tokens with proper CORS configuration (`BlazorClient` policy)
+- **Error handling**: API returns structured error responses with validation details and trace IDs

@@ -1,0 +1,100 @@
+@page "/login"
+@inject IAuthService AuthService
+@inject NavigationManager Navigation
+@inject ISnackbar Snackbar
+
+<MudContainer MaxWidth="MaxWidth.Small" Class="pt-8">
+    <MudThemeProvider @ref="_mudThemeProvider" @bind-IsDarkMode="_isDarkMode" />
+    <MudPaper Class="pa-8">
+        <MudText Typo="Typo.h4" Align="Align.Center" Color="Color.Primary" Class="mb-6">
+            Login
+        </MudText>
+
+        <EditForm Model="@loginRequest" OnValidSubmit="@HandleLogin">
+            <DataAnnotationsValidator />
+            
+            <MudTextField @bind-Value="loginRequest.Email"
+                          Label="Email"
+                          Variant="Variant.Outlined"
+                          FullWidth="true"
+                          Margin="Margin.Normal"
+                          InputType="InputType.Email"
+                          For="@(() => loginRequest.Email)" />
+
+            <MudTextField @bind-Value="loginRequest.Password"
+                          Label="Password"
+                          Variant="Variant.Outlined"
+                          FullWidth="true"
+                          Margin="Margin.Normal"
+                          InputType="InputType.Password"
+                          For="@(() => loginRequest.Password)" />
+
+            <MudButton ButtonType="ButtonType.Submit"
+                       Variant="Variant.Filled"
+                       Color="Color.Primary"
+                       FullWidth="true"
+                       Size="Size.Large"
+                       Class="mt-4"
+                       Disabled="@isLoading">
+                @if (isLoading)
+                {
+                    <MudProgressCircular Class="mr-3" Size="Size.Small" Indeterminate="true" />
+                }
+                Login
+            </MudButton>
+        </EditForm>
+
+        <MudDivider Class="my-6" />
+
+        <MudText Align="Align.Center">
+            Don't have an account? 
+            <MudLink Href="/register" Color="Color.Primary">Register here</MudLink>
+        </MudText>
+    </MudPaper>
+</MudContainer>
+
+@code {
+    private LoginRequest loginRequest = new();
+    private bool isLoading = false;
+    private bool _isDarkMode;
+    private MudThemeProvider? _mudThemeProvider;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && _mudThemeProvider is not null)
+        {
+            _isDarkMode = await _mudThemeProvider.GetSystemDarkModeAsync();
+            StateHasChanged();
+        }
+    }
+
+    private async Task HandleLogin()
+    {
+        isLoading = true;
+        StateHasChanged();
+
+        try
+        {
+            bool success = await AuthService.LoginAsync(loginRequest);
+            
+            if (success)
+            {
+                Snackbar.Add("Login successful!", Severity.Success);
+                Navigation.NavigateTo("/");
+            }
+            else
+            {
+                Snackbar.Add("Login failed. Please check your credentials.", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"An error occurred: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+}

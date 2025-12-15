@@ -21,11 +21,17 @@ public sealed partial class PostsController(ITransactionServiceHandle transactio
 
     public partial Task<IActionResult> GetPostsAsync(PostListRequest request, CancellationToken cancellationToken) => Transaction.Scoped.RunReadOnlyAsync<IActionResult>(async (dbContext, ct) =>
     {
-        if (!TryValidateContext(request, out IActionResult? errorResult, out Guid _))
+        if (!TryValidateContext(request, out IActionResult? errorResult, out Guid _)) 
         {
             return errorResult;
         }
-        // tz is nullable here because we have a default
+        int totalPosts = await dbContext.Set<CloudbbPost>().AsNoTracking().CountAsync(ct);
+        // validate pagination parameters
+        int maxPageNumber = (int)Math.Ceiling((double)totalPosts / request.PageSize);
+        if (request.PageNumber < 1 || request.PageNumber > Math.Max(1, maxPageNumber))
+        {
+            return BadRequest($"PageNumber must be between 1 and {maxPageNumber}.");
+        }
         TimeZoneInfo tzinfo = (request.TimeZone ?? s_defaultTimeZone).GetTimeZoneInfo();
         var query = dbContext.Set<CloudbbPost>().AsNoTracking()
             // subselect to get latest revision per post
@@ -58,6 +64,7 @@ public sealed partial class PostsController(ITransactionServiceHandle transactio
             (
                 postInfo.Post.Id,
                 postInfo.Post.UserId,
+                postInfo.Post.User.Username,
                 postInfo.LatestRevision.Title,
                 // limit content preview to 512 characters
                 postInfo.LatestRevision.Content.Length <= 512
@@ -71,7 +78,17 @@ public sealed partial class PostsController(ITransactionServiceHandle transactio
             ))
             .ToListAsync(ct);
 
-        return Ok(new PostListResponse(posts));
+        PostListResponse result = new
+        (
+            posts,
+            new PaginationInfo
+            (
+                CurrentPage: request.PageNumber,
+                CurrentPageSize: posts.Count,
+                TotalPages: maxPageNumber
+            )
+        );
+        return Ok(result);
     }, cancellationToken);
 
     public partial Task<IActionResult> GetPostAsync(PostReadRequest request, CancellationToken cancellationToken) => Transaction.Scoped.RunReadOnlyAsync(async (dbContext, ct) =>

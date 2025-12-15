@@ -88,7 +88,7 @@ public sealed partial class CommentsController(ITransactionServiceHandle transac
             .Where(c => c.Id == comment.Id)
             .Select(c => new CommentVoteResponse
             (
-                c.PostId,
+                c.Id,
                 // recalculate comment score
                 c.Votes.Select(vote => vote.Value).Sum(),
                 // user's vote on this comment (+1,-1), or None (0) if the user hasn't voted

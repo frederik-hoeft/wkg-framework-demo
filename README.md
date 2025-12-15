@@ -4,19 +4,25 @@ Cloudbb is a feature-complete ASP.NET Core 10.0 forum Web API using PostgreSQL, 
 
 ## Overview
 - **Core app**: `source/Cloudbb/Cloudbb.Web` (`net10.0`, nullable enabled)
-- **Auth**: ASP.NET Core Identity + JWT (ECDSA ES256 asymmetric signing), global authorization
+- **Blazor Client**: `source/Cloudbb/Cloudbb.Client` - WebAssembly SPA with MudBlazor UI
+- **Auth**: ASP.NET Core Identity + JWT (RSA RS256 asymmetric signing), global authorization
 - **Data**: PostgreSQL via EF Core with explicit entity naming/mapping and model discovery
 - **API Versioning**: `Asp.Versioning` with grouped Swagger in Development  
 - **Transactions**: `ReadCommitted` via `Wkg.AspNetCore.Transactions`
 - **Testing**: Comprehensive unit and integration test suites using MSTest v4
 
 ## Features
-- **User Authentication**: JWT-based registration, login with secure ECDSA signing
+- **User Authentication**: JWT-based registration, login with secure RSA signing
 - **Forum Posts**: Create, edit, delete posts with revision history and community voting
 - **Comment System**: Threaded comments on posts with voting and moderation
 - **Community Voting**: Upvote/downvote system for posts and comments
 - **User Management**: Role-based authorization (admin/user) with Identity integration
 - **API Documentation**: Comprehensive Swagger/OpenAPI docs with examples
+- **Modern UI**: Blazor WebAssembly SPA with MudBlazor components
+  - Responsive design with pagination and sorting
+  - Real-time timezone preference (stored in browser)
+  - Interactive voting on posts and comments
+  - Inline editing and deletion for owned content
 
 ## Project Structure
 - `source/Cloudbb/Cloudbb.Web` - Main Web API project
@@ -26,7 +32,13 @@ Cloudbb is a feature-complete ASP.NET Core 10.0 forum Web API using PostgreSQL, 
         - `CommentsController`: comment creation, deletion, voting on posts
     - `Configuration/Swagger/`: Swagger configuration and filters
     - `Data/`: DbContext, model loader, entities (posts, comments, votes, users), migrations
-    - `Services/Auth/`: JWT services with ECDSA key management and claim handling
+    - `Services/Auth/`: JWT services with RSA key management and claim handling
+- `source/Cloudbb/Cloudbb.Client` - Blazor WebAssembly client
+    - `Pages/`: Razor pages (Home, Login, Register, Posts, PostDetail, CreatePost, EditPost)
+    - `Components/`: Reusable components (TimeZoneSelector)
+    - `Services/`: API client services (Auth, Posts, Comments, TimeZone)
+    - `Models/`: DTOs matching API specification
+    - `Layout/`: App layout and navigation
 - `source/Cloudbb/Cloudbb.Web.Tests` - Unit tests (MSTest v4)
     - `Services/Auth/`: JWT service, key import, algorithm provider tests
 - `source/Cloudbb/Cloudbb.Web.Tests.Integration` - Integration tests
@@ -44,22 +56,22 @@ Set these in `appsettings.json` or environment variables:
 - `Auth:Jwt:Issuer`, `Auth:Jwt:Audience`: JWT issuer and audience validation
 - `Auth:Jwt:ClockSkew`: token validation clock skew (e.g., "00:00:00" for zero skew)
 - `Auth:Jwt:TimeToLive`: token expiration time
-- `Auth:Jwt:ECDsaKeyPath`: path to ECDSA private key PEM file for JWT signing
+- `Auth:Jwt:RsaKeyPath`: path to RSA private key PEM file for JWT signing
 
 Swagger XML comments are loaded from `Cloudbb.Web.xml` and enabled in Development.
 
 ## Authentication
 JWT is configured in `Startup.cs` (`JwtBearerDefaults`) with configurable clock skew. Services:
-- `IJwtAlgorithmProvider` → `JwtEcdsaSha256AlgorithmProvider` (ES256 algorithm)
-- `IJwtECDsaSigningKeyImportService` → `JwtECDsaPemFileSigningKeyImportService` (PEM key loading)
-- `IJwtSigningKeyProvider` → `JwtECDsaSigningKeyProvider` (ECDSA key management)
+- `IJwtAlgorithmProvider` → `RsaSha256AlgorithmProvider` (RS256 algorithm)
+- `IJwtRsaSigningKeyImportService` → `JwtRsaPemFileSigningKeyImportService` (PEM key loading)
+- `IJwtSigningKeyProvider` → `JwtRsaSigningKeyProvider` (RSA key management)
 - `IJwtService` → `JwtService` (token generation and validation)
 - `IUserClaimIndex` → `UserClaimIndex` (user claim management)
 - `ITimingRandomizationService` → `CsprngTimingRandomizationService` (security timing)
 
 Tokens include claims for `NameIdentifier`, `Name`, `Email`, `Role`, `Jti`, `Iat`. TTL from `Auth:Jwt:TimeToLive`.
 
-**Security**: Uses ECDSA ES256 asymmetric signing with PEM-format private keys for enhanced security over symmetric HMAC approaches.
+**Security**: Uses RSA RS256 asymmetric signing with PEM-format private keys for enhanced security over symmetric HMAC approaches.
 
 ## Data & Migrations
 - `CloudbbDbContext` extends `IdentityDbContext<IdentityUser>` and enforces explicit entity/property mapping policies
@@ -85,8 +97,11 @@ Use the following commands from the repo root:
 # Build solution
 dotnet build source/Cloudbb/Cloudbb.slnx
 
-# Run the Web API
+# Run the Web API (https://localhost:7156)
 dotnet run --project source/Cloudbb/Cloudbb.Web
+
+# Run the Blazor Client (https://localhost:7089)
+dotnet run --project source/Cloudbb/Cloudbb.Client
 
 # Run unit tests
 dotnet test source/Cloudbb/Cloudbb.Web.Tests
@@ -97,6 +112,19 @@ dotnet test source/Cloudbb/Cloudbb.Web.Tests.Integration
 # Run all tests
 dotnet test source/Cloudbb/Cloudbb.slnx
 ```
+
+### Development Setup
+To run both the API and client together for local development:
+
+1. **Configure the API** (see Configuration section):
+   - Generate RSA key for JWT signing: `openssl genrsa -out rsa_key.pem 2048`
+   - Set up PostgreSQL database
+   - Update `appsettings.Development.json` with connection string and key path
+
+2. **Run the API**: `dotnet run --project source/Cloudbb/Cloudbb.Web`
+3. **Run the Client**: `dotnet run --project source/Cloudbb/Cloudbb.Client`
+
+The client is pre-configured to connect to the API at `https://localhost:7156` and runs on `https://localhost:7089`. CORS is configured to allow client requests.
 
 Database migrations:
 

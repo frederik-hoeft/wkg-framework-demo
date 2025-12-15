@@ -1,0 +1,165 @@
+@page "/posts/{postId:guid}/edit"
+@using Microsoft.AspNetCore.Authorization
+@using Cloudbb.Client.Models
+@using Cloudbb.Client.Services.Posts
+@using Cloudbb.Client.Services.TimeZone
+@inject IPostService PostService
+@inject ITimeZoneService TimeZoneService
+@inject NavigationManager Navigation
+@inject ISnackbar Snackbar
+@attribute [Authorize]
+
+<PageTitle>Edit Post - Cloudbb Forum</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Medium" Class="mt-4">
+    @if (isLoading)
+    {
+        <MudPaper Class="pa-8 text-center">
+            <MudProgressCircular Size="Size.Large" Indeterminate="true" />
+        </MudPaper>
+    }
+    else if (post is null)
+    {
+        <MudPaper Class="pa-8 text-center">
+            <MudText Typo="Typo.h5" Color="Color.Error">Post not found or you don't have permission to edit it</MudText>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" Class="mt-4" Href="/posts">
+                Back to Posts
+            </MudButton>
+        </MudPaper>
+    }
+    else
+    {
+        <MudPaper Class="pa-6">
+            <MudText Typo="Typo.h4" Class="mb-4">Edit Post</MudText>
+
+            <EditForm Model="@editRequest" OnValidSubmit="@HandleEditPost">
+                <DataAnnotationsValidator />
+                
+                <MudTextField @bind-Value="editRequest.Title"
+                              Label="Title"
+                              Variant="Variant.Outlined"
+                              FullWidth="true"
+                              Margin="Margin.Normal"
+                              Required="true"
+                              Counter="256"
+                              MaxLength="256"
+                              HelperText="Maximum 256 characters"
+                              For="@(() => editRequest.Title)" />
+
+                <MudTextField @bind-Value="editRequest.Content"
+                              Label="Content"
+                              Variant="Variant.Outlined"
+                              FullWidth="true"
+                              Margin="Margin.Normal"
+                              Required="true"
+                              Lines="10"
+                              HelperText="Edit your post content"
+                              For="@(() => editRequest.Content)" />
+
+                <MudStack Row="true" Spacing="3" Class="mt-4">
+                    <MudButton ButtonType="ButtonType.Submit"
+                               Variant="Variant.Filled"
+                               Color="Color.Primary"
+                               Size="Size.Large"
+                               Disabled="@isSaving">
+                        @if (isSaving)
+                        {
+                            <MudProgressCircular Class="mr-2" Size="Size.Small" Indeterminate="true" />
+                        }
+                        Save Changes
+                    </MudButton>
+                    <MudButton Variant="Variant.Outlined"
+                               Color="Color.Default"
+                               Size="Size.Large"
+                               OnClick="@(() => Navigation.NavigateTo($"/posts/{PostId}"))"
+                               Disabled="@isSaving">
+                        Cancel
+                    </MudButton>
+                </MudStack>
+            </EditForm>
+        </MudPaper>
+    }
+</MudContainer>
+
+@code {
+    [Parameter]
+    public Guid PostId { get; set; }
+
+    private PostReadResponse? post;
+    private PostEditRequest editRequest = new();
+    private bool isLoading = true;
+    private bool isSaving = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadPostAsync();
+    }
+
+    private async Task LoadPostAsync()
+    {
+        isLoading = true;
+        StateHasChanged();
+
+        try
+        {
+            Models.TimeZone timeZone = await TimeZoneService.GetTimeZoneAsync();
+            PostReadRequest request = new()
+            {
+                PostId = PostId,
+                TimeZone = timeZone,
+                IncludeComments = false
+            };
+
+            post = await PostService.GetPostAsync(request);
+            if (post is not null && post.CanEdit)
+            {
+                editRequest.PostId = PostId;
+                editRequest.Title = post.Title;
+                editRequest.Content = post.Content;
+            }
+            else
+            {
+                post = null;
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading post: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task HandleEditPost()
+    {
+        isSaving = true;
+        StateHasChanged();
+
+        try
+        {
+            PostEditResponse? response = await PostService.EditPostAsync(editRequest);
+            
+            if (response is not null)
+            {
+                Snackbar.Add("Post updated successfully!", Severity.Success);
+                Navigation.NavigateTo($"/posts/{PostId}");
+            }
+            else
+            {
+                Snackbar.Add("Failed to update post. Please try again.", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"An error occurred: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isSaving = false;
+            StateHasChanged();
+        }
+    }
+}
