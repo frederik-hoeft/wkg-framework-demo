@@ -1,4 +1,4 @@
-﻿using Cloudbb.Web.Api.V1.Extensions;
+using Cloudbb.Web.Api.V1.Extensions;
 using Cloudbb.Web.Api.V1.Models;
 using Cloudbb.Web.Api.V1.Models.Comments;
 using Cloudbb.Web.Api.V1.Models.Posts;
@@ -21,7 +21,7 @@ public sealed partial class PostsController(ITransactionServiceHandle transactio
 
     public partial Task<IActionResult> GetPostsAsync(PostListRequest request, CancellationToken cancellationToken) => Transaction.Scoped.RunReadOnlyAsync<IActionResult>(async (dbContext, ct) =>
     {
-        if (!TryValidateContext(request, out IActionResult? errorResult, out Guid _))
+        if (!TryValidateContext(request, out IActionResult? errorResult, out Guid _)) 
         {
             return errorResult;
         }
@@ -32,7 +32,6 @@ public sealed partial class PostsController(ITransactionServiceHandle transactio
         {
             return BadRequest($"PageNumber must be between 1 and {maxPageNumber}.");
         }
-        // tz is nullable here because we have a default
         TimeZoneInfo tzinfo = (request.TimeZone ?? s_defaultTimeZone).GetTimeZoneInfo();
         var query = dbContext.Set<CloudbbPost>().AsNoTracking()
             // subselect to get latest revision per post
@@ -65,6 +64,7 @@ public sealed partial class PostsController(ITransactionServiceHandle transactio
             (
                 postInfo.Post.Id,
                 postInfo.Post.UserId,
+                postInfo.Post.User.Username,
                 postInfo.LatestRevision.Title,
                 // limit content preview to 512 characters
                 postInfo.LatestRevision.Content.Length <= 512

@@ -5,7 +5,7 @@
 <AuthorizeView>
     <Authorized>
         <MudContainer MaxWidth="MaxWidth.Large">
-            <MudText Typo="Typo.h3" Class="mb-4">Welcome to Cloudbb Forum</MudText>
+            <MudText Style="margin-top: 2rem" Typo="Typo.h3" Class="mb-4">Welcome to Cloudbb Forum</MudText>
             <MudText Typo="Typo.h5" Class="mb-6">Hello, @context.User.Identity?.Name!</MudText>
             
             <MudGrid>
@@ -22,7 +22,7 @@
                     <MudPaper Class="pa-4" Elevation="2">
                         <MudText Typo="Typo.h6" Class="mb-2">Create a Post</MudText>
                         <MudText>Share your thoughts and start a new discussion.</MudText>
-                        <MudButton Variant="Variant.Filled" Color="Color.Secondary" Class="mt-3" Href="/posts/create">
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary" Class="mt-3" Href="/posts/create">
                             Create Post
                         </MudButton>
                     </MudPaper>

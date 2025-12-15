@@ -1,10 +1,11 @@
-﻿using Microsoft.AspNetCore.Components.Authorization;
+﻿using Cloudbb.Client.Services.Network;
+using Microsoft.AspNetCore.Components.Authorization;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 
 namespace Cloudbb.Client.Services.Auth;
 
-internal sealed class JwtAuthenticationStateProvider(ITokenStore tokenStore, HttpClient httpClient) : AuthenticationStateProvider
+internal sealed class JwtAuthenticationStateProvider(ITokenStore tokenStore, IDefaultHeaderInjectorCollection defaultHeaders) : AuthenticationStateProvider
 {
     private readonly AuthenticationState _anonymous = new(new ClaimsPrincipal(new ClaimsIdentity()));
 
@@ -24,8 +25,7 @@ internal sealed class JwtAuthenticationStateProvider(ITokenStore tokenStore, Htt
             
             if (user.Identity?.IsAuthenticated == true)
             {
-                // Add the token to the HTTP client headers for API calls
-                httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+                defaultHeaders.AddOrUpdate(new AuthorizationHeaderInjector("Bearer", token));
                 return new AuthenticationState(user);
             }
             
@@ -42,6 +42,10 @@ internal sealed class JwtAuthenticationStateProvider(ITokenStore tokenStore, Htt
         await tokenStore.SetTokenAsync(jwtToken);
         // Parse JWT token to extract claims
         ClaimsPrincipal claimsPrincipal = CreateClaimsFromJwt(jwtToken);
+        if (claimsPrincipal.Identity?.IsAuthenticated == true)
+        {
+            defaultHeaders.AddOrUpdate(new AuthorizationHeaderInjector("Bearer", jwtToken));
+        }
         Task<AuthenticationState> authState = Task.FromResult(new AuthenticationState(claimsPrincipal));
         NotifyAuthenticationStateChanged(authState);
     }
@@ -50,7 +54,7 @@ internal sealed class JwtAuthenticationStateProvider(ITokenStore tokenStore, Htt
     {
         await tokenStore.RemoveTokenAsync();
         // Remove authorization header
-        httpClient.DefaultRequestHeaders.Authorization = null;
+        defaultHeaders.TryRemove("Authorization");
         Task<AuthenticationState> authState = Task.FromResult(_anonymous);
         NotifyAuthenticationStateChanged(authState);
     }

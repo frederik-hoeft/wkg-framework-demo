@@ -1,0 +1,402 @@
+@page "/posts/{postId:guid}"
+@using Cloudbb.Client.Models
+@using Cloudbb.Client.Services.Posts
+@using Cloudbb.Client.Services.Comments
+@using Cloudbb.Client.Services.TimeZone
+@inject IPostService PostService
+@inject ICommentService CommentService
+@inject ITimeZoneService TimeZoneService
+@inject NavigationManager Navigation
+@inject ISnackbar Snackbar
+@inject AuthenticationStateProvider AuthStateProvider
+
+<PageTitle>@(post?.Title ?? "Post") - Cloudbb Forum</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-4">
+    @if (isLoading)
+    {
+        <MudPaper Class="pa-8 text-center">
+            <MudProgressCircular Size="Size.Large" Indeterminate="true" />
+        </MudPaper>
+    }
+    else if (post is null)
+    {
+        <MudPaper Class="pa-8 text-center">
+            <MudText Typo="Typo.h5" Color="Color.Error">Post not found</MudText>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" Class="mt-4" Href="/posts">
+                Back to Posts
+            </MudButton>
+        </MudPaper>
+    }
+    else
+    {
+        <!-- Post Content -->
+        <MudPaper Class="pa-6 mb-4">
+            <MudGrid>
+                <MudItem xs="12">
+                    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Start">
+                        <MudText Typo="Typo.h4">@post.Title</MudText>
+                        @if (post.CanEdit)
+                        {
+                            <MudStack Row="true" Spacing="2">
+                                <MudIconButton Icon="@Icons.Material.Filled.Edit" 
+                                               Color="Color.Primary" 
+                                               OnClick="@ShowEditDialog" />
+                                <MudIconButton Icon="@Icons.Material.Filled.Delete" 
+                                               Color="Color.Error" 
+                                               OnClick="@DeletePost" />
+                            </MudStack>
+                        }
+                    </MudStack>
+                </MudItem>
+                <MudItem xs="12" Class="mt-4">
+                    <MudText Typo="Typo.body1" Style="white-space: pre-wrap;">@post.Content</MudText>
+                </MudItem>
+                <MudItem xs="12" Class="mt-4">
+                    <MudDivider />
+                </MudItem>
+                <MudItem xs="12" Class="mt-2">
+                    <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center">
+                        <MudIconButton Icon="@Icons.Material.Filled.ThumbUp" 
+                                       Color="@(post.UserVote == VoteType.Upvote ? Color.Success : Color.Default)"
+                                       OnClick="@(() => VotePost(VoteType.Upvote))"
+                                       Disabled="@(post.CanEdit || isVoting)" />
+                        <MudText Typo="Typo.h6" Color="@GetVoteScoreColor(post.VoteScore)">@post.VoteScore</MudText>
+                        <MudIconButton Icon="@Icons.Material.Filled.ThumbDown" 
+                                       Color="@(post.UserVote == VoteType.Downvote ? Color.Error : Color.Default)"
+                                       OnClick="@(() => VotePost(VoteType.Downvote))"
+                                       Disabled="@(post.CanEdit || isVoting)" />
+                        <MudSpacer />
+                        <MudChip T="string" Color="Color.Default" Icon="@Icons.Material.Filled.Person">
+                            @post.Username
+                        </MudChip>
+                        <MudChip T="string" Color="Color.Default" Icon="@Icons.Material.Filled.Schedule">
+                            @post.LastModified.ToString("g")
+                        </MudChip>
+                    </MudStack>
+                </MudItem>
+            </MudGrid>
+        </MudPaper>
+
+        <!-- Comments Section -->
+        <MudPaper Class="pa-6">
+            <MudText Typo="Typo.h5" Class="mb-4">Comments (@(post.Comments?.Count ?? 0))</MudText>
+
+            <!-- Add Comment Form -->
+            <MudPaper Class="pa-4 mb-4" Elevation="0" Style="background-color: var(--mud-palette-background-grey);">
+                <EditForm Model="@newComment" OnValidSubmit="@HandleAddComment">
+                    <MudTextField @bind-Value="newComment.Content"
+                                  Label="Add a comment"
+                                  Variant="Variant.Outlined"
+                                  FullWidth="true"
+                                  Lines="3"
+                                  Counter="1024"
+                                  MaxLength="1024"
+                                  Required="true" />
+                    <MudButton ButtonType="ButtonType.Submit"
+                               Variant="Variant.Filled"
+                               Color="Color.Primary"
+                               Class="mt-2"
+                               Disabled="@isAddingComment">
+                        @if (isAddingComment)
+                        {
+                            <MudProgressCircular Class="mr-2" Size="Size.Small" Indeterminate="true" />
+                        }
+                        Post Comment
+                    </MudButton>
+                </EditForm>
+            </MudPaper>
+
+            <!-- Comments List -->
+            @if (post.Comments is not null && post.Comments.Count > 0)
+            {
+                @foreach (CommentResponseEntry comment in post.Comments)
+                {
+                    <MudPaper Class="pa-4 mb-3" Elevation="1">
+                        <MudGrid Spacing="0">
+                            <MudItem xs="12">
+                                <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Start">
+                                    <MudChip T="string" Size="Size.Small" Color="Color.Default" Icon="@Icons.Material.Filled.Person">
+                                        @comment.Username
+                                    </MudChip>
+                                    <MudChip T="string" Size="Size.Small" Color="Color.Default" Icon="@Icons.Material.Filled.Schedule">
+                                        @comment.CreationTime.ToString("g")
+                                    </MudChip>
+                                </MudStack>
+                            </MudItem>
+                            <MudItem xs="12" Class="mt-2">
+                                <MudText Typo="Typo.body1" Style="white-space: pre-wrap; font-size: small">@comment.Content</MudText>
+                            </MudItem>
+                            <MudItem xs="12" Class="mt-2">
+                                <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center">
+                                    <MudIconButton Icon="@Icons.Material.Filled.ThumbUp" 
+                                                   Size="Size.Small"
+                                                   Color="@(comment.UserVote == VoteType.Upvote ? Color.Success : Color.Default)"
+                                                   OnClick="@(() => VoteComment(comment.CommentId, VoteType.Upvote))"
+                                                   Disabled="@(comment.CanEdit || isVotingComment)" />
+                                    <MudText Typo="Typo.body2" Color="@GetVoteScoreColor(comment.VoteScore)">@comment.VoteScore</MudText>
+                                    <MudIconButton Icon="@Icons.Material.Filled.ThumbDown" 
+                                                   Size="Size.Small"
+                                                   Color="@(comment.UserVote == VoteType.Downvote ? Color.Error : Color.Default)"
+                                                   OnClick="@(() => VoteComment(comment.CommentId, VoteType.Downvote))"
+                                                   Disabled="@(comment.CanEdit || isVotingComment)" />
+                                    @if (comment.CanEdit)
+                                    {
+                                        <MudSpacer />
+                                        <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                                                       Size="Size.Small"
+                                                       Color="Color.Error"
+                                                       OnClick="@(() => DeleteComment(comment.CommentId))" />
+                                    }
+                                </MudStack>
+                            </MudItem>
+                        </MudGrid>
+                    </MudPaper>
+                }
+            }
+            else
+            {
+                <MudText Color="Color.Secondary">No comments yet. Be the first to comment!</MudText>
+            }
+        </MudPaper>
+
+        <MudButton Variant="Variant.Outlined" Color="Color.Default" Class="mt-4" Href="/posts">
+            Back to Posts
+        </MudButton>
+    }
+</MudContainer>
+
+    @code {
+    [Parameter]
+    public Guid PostId { get; set; }
+
+    private PostReadResponse? post;
+    private CommentCreationRequest newComment = new();
+    private bool isLoading = true;
+    private bool isVoting = false;
+    private bool isVotingComment = false;
+    private bool isAddingComment = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadPostAsync();
+    }
+
+    private async Task LoadPostAsync()
+    {
+        isLoading = true;
+        StateHasChanged();
+
+        try
+        {
+            Models.TimeZone timeZone = await TimeZoneService.GetTimeZoneAsync();
+            PostReadRequest request = new()
+            {
+                PostId = PostId,
+                TimeZone = timeZone,
+                IncludeComments = true
+            };
+
+            post = await PostService.GetPostAsync(request);
+            if (post is null)
+            {
+                Snackbar.Add("Post not found", Severity.Error);
+            }
+            else
+            {
+                newComment.PostId = PostId;
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading post: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task VotePost(VoteType voteType)
+    {
+        if (post is null) return;
+
+        isVoting = true;
+        StateHasChanged();
+
+        try
+        {
+            // Toggle vote if clicking the same vote type
+            VoteType actualVoteType = post.UserVote == voteType ? VoteType.NoVote : voteType;
+
+            PostVoteRequest request = new()
+            {
+                PostId = PostId,
+                VoteType = actualVoteType
+            };
+
+            PostVoteResponse? result = await PostService.VotePostAsync(request);
+            if (result is null)
+            {
+                Snackbar.Add("Failed to vote on comment", Severity.Error);
+                return;
+            }
+            if (result.PostId != post.PostId)
+            {
+                // Reload post to get updated comment vote count
+                await LoadPostAsync();
+            }
+            else
+            {
+                post.VoteScore = result.NewScore;
+                post.UserVote = actualVoteType;
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error voting on post: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isVoting = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task VoteComment(Guid commentId, VoteType voteType)
+    {
+        if (post is null) return;
+
+        isVotingComment = true;
+        StateHasChanged();
+
+        try
+        {
+            CommentResponseEntry? comment = post.Comments?.FirstOrDefault(c => c.CommentId == commentId);
+            if (comment is null) return;
+
+            // Toggle vote if clicking the same vote type
+            VoteType actualVoteType = comment.UserVote == voteType ? VoteType.NoVote : voteType;
+
+            CommentVoteRequest request = new()
+            {
+                CommentId = commentId,
+                VoteType = actualVoteType
+            };
+
+            CommentVoteResponse? result = await CommentService.VoteCommentAsync(request);
+            if (result is null)
+            {
+                Snackbar.Add("Failed to vote on comment", Severity.Error);
+                return;
+            }
+            if (result.CommentId != comment.CommentId)
+            {
+                // Reload post to get updated comment vote count
+                await LoadPostAsync();
+            }
+            else
+            {
+                comment.VoteScore = result.NewScore;
+                comment.UserVote = actualVoteType;
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error voting on comment: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isVotingComment = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task HandleAddComment()
+    {
+        isAddingComment = true;
+        StateHasChanged();
+
+        try
+        {
+            CommentCreationResponse? response = await CommentService.CreateCommentAsync(newComment);
+            if (response is not null)
+            {
+                Snackbar.Add("Comment added successfully!", Severity.Success);
+                newComment = new() { PostId = PostId };
+                await LoadPostAsync();
+            }
+            else
+            {
+                Snackbar.Add("Failed to add comment", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error adding comment: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isAddingComment = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task DeleteComment(Guid commentId)
+    {
+        try
+        {
+            CommentDeleteRequest request = new() { CommentId = commentId };
+            bool success = await CommentService.DeleteCommentAsync(request);
+            if (success)
+            {
+                Snackbar.Add("Comment deleted successfully", Severity.Success);
+                await LoadPostAsync();
+            }
+            else
+            {
+                Snackbar.Add("Failed to delete comment", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error deleting comment: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private void ShowEditDialog()
+    {
+        // Navigate to edit page
+        Navigation.NavigateTo($"/posts/{PostId}/edit");
+    }
+
+    private async Task DeletePost()
+    {
+        try
+        {
+            PostDeleteRequest request = new() { PostId = PostId };
+            bool success = await PostService.DeletePostAsync(request);
+            if (success)
+            {
+                Snackbar.Add("Post deleted successfully", Severity.Success);
+                Navigation.NavigateTo("/posts");
+            }
+            else
+            {
+                Snackbar.Add("Failed to delete post", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error deleting post: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private Color GetVoteScoreColor(int score)
+    {
+        if (score > 0) return Color.Success;
+        if (score < 0) return Color.Error;
+        return Color.Default;
+    }
+}

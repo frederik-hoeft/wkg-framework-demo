@@ -1,6 +1,6 @@
 using Cloudbb.Client.Models;
 
-namespace Cloudbb.Client.Services.Auth;
+namespace Cloudbb.Client.Services;
 
 public interface IAuthService
 {
