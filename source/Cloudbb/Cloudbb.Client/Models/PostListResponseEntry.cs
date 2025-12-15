@@ -7,6 +7,7 @@ public sealed class PostListResponseEntry
 {
     public Guid PostId { get; set; }
     public Guid UserId { get; set; }
+    public string Username { get; set; } = string.Empty;
     public string Title { get; set; } = string.Empty;
     public string ContentPreview { get; set; } = string.Empty;
     public int VoteScore { get; set; }

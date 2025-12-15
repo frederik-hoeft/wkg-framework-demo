@@ -20,5 +20,5 @@ public interface ICommentService
     /// <summary>
     /// Casts or updates a vote on a forum comment.
     /// </summary>
-    Task<bool> VoteCommentAsync(CommentVoteRequest request);
+    Task<CommentVoteResponse?> VoteCommentAsync(CommentVoteRequest request);
 }

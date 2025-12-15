@@ -1,106 +1,27 @@
-using System.Net.Http.Json;
-using System.Text.Json;
 using Cloudbb.Client.Models;
+using Cloudbb.Client.Services.Network;
+using System.Text.Json;
 
 namespace Cloudbb.Client.Services.Posts;
 
-internal sealed class PostService
-(
-    HttpClient httpClient,
-    JsonSerializerOptions jsonOptions
-) : IPostService
+internal sealed class PostService(IHttpClientFactory httpClientFactory, JsonSerializerOptions jsonOptions) 
+    : ApiService(httpClientFactory, jsonOptions), IPostService
 {
-    public async Task<PostListResponse?> GetPostsAsync(PostListRequest request)
-    {
-        try
-        {
-            using HttpResponseMessage response = await httpClient.PostAsJsonAsync("api/v1/posts/list", request, jsonOptions);
-            if (!response.IsSuccessStatusCode)
-            {
-                return null;
-            }
-            return await response.Content.ReadFromJsonAsync<PostListResponse>(jsonOptions);
-        }
-        catch
-        {
-            return null;
-        }
-    }
+    public Task<PostListResponse?> GetPostsAsync(PostListRequest request) => 
+        PostAsync<PostListRequest, PostListResponse>("api/v1/posts/list", request);
 
-    public async Task<PostReadResponse?> GetPostAsync(PostReadRequest request)
-    {
-        try
-        {
-            using HttpResponseMessage response = await httpClient.PostAsJsonAsync("api/v1/posts/read", request, jsonOptions);
-            if (!response.IsSuccessStatusCode)
-            {
-                return null;
-            }
-            return await response.Content.ReadFromJsonAsync<PostReadResponse>(jsonOptions);
-        }
-        catch
-        {
-            return null;
-        }
-    }
+    public Task<PostReadResponse?> GetPostAsync(PostReadRequest request) => 
+        PostAsync<PostReadRequest, PostReadResponse>("api/v1/posts/read", request);
 
-    public async Task<PostCreationResponse?> CreatePostAsync(PostCreationRequest request)
-    {
-        try
-        {
-            using HttpResponseMessage response = await httpClient.PostAsJsonAsync("api/v1/posts/create", request, jsonOptions);
-            if (!response.IsSuccessStatusCode)
-            {
-                return null;
-            }
-            return await response.Content.ReadFromJsonAsync<PostCreationResponse>(jsonOptions);
-        }
-        catch
-        {
-            return null;
-        }
-    }
+    public Task<PostCreationResponse?> CreatePostAsync(PostCreationRequest request) => 
+        PostAsync<PostCreationRequest, PostCreationResponse>("api/v1/posts/create", request);
 
-    public async Task<PostEditResponse?> EditPostAsync(PostEditRequest request)
-    {
-        try
-        {
-            using HttpResponseMessage response = await httpClient.PostAsJsonAsync("api/v1/posts/edit", request, jsonOptions);
-            if (!response.IsSuccessStatusCode)
-            {
-                return null;
-            }
-            return await response.Content.ReadFromJsonAsync<PostEditResponse>(jsonOptions);
-        }
-        catch
-        {
-            return null;
-        }
-    }
+    public Task<PostEditResponse?> EditPostAsync(PostEditRequest request) => 
+        PostAsync<PostEditRequest, PostEditResponse>("api/v1/posts/edit", request);
 
-    public async Task<bool> DeletePostAsync(PostDeleteRequest request)
-    {
-        try
-        {
-            using HttpResponseMessage response = await httpClient.PostAsJsonAsync("api/v1/posts/delete", request, jsonOptions);
-            return response.IsSuccessStatusCode;
-        }
-        catch
-        {
-            return false;
-        }
-    }
+    public Task<bool> DeletePostAsync(PostDeleteRequest request) =>
+        PostAsync("api/v1/posts/delete", request);
 
-    public async Task<bool> VotePostAsync(PostVoteRequest request)
-    {
-        try
-        {
-            using HttpResponseMessage response = await httpClient.PostAsJsonAsync("api/v1/posts/vote", request, jsonOptions);
-            return response.IsSuccessStatusCode;
-        }
-        catch
-        {
-            return false;
-        }
-    }
+    public Task<PostVoteResponse?> VotePostAsync(PostVoteRequest request) => 
+        PostAsync<PostVoteRequest, PostVoteResponse>("api/v1/posts/vote", request);
 }

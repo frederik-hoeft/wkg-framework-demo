@@ -69,31 +69,38 @@
                        Style="width: 100%; text-transform: none;"
                        OnClick="@(() => NavigateToPost(postId))">
                 <MudPaper Class="pa-4 hover-effect" Style="width: 100%;">
-                    <MudGrid>
-                        <MudItem xs="12">
-                            <MudText Typo="Typo.h6" Color="Color.Primary">@post.Title</MudText>
-                            <MudText Typo="Typo.caption" Color="Color.Secondary">
-                                Post ID: @post.PostId • User ID: @post.UserId.ToString()[..8]...
+                    <MudGrid Style="display:grid; grid-template-columns: auto 1fr;">
+                        <MudItem>
+                            <MudGrid Style="display:grid; grid-template-columns: auto 1fr;">
+                                <MudItem>
+                                    <MudStack Row="false" Spacing="1" Class="mt-2 object-fit-contain">
+                                        <MudChip Style="justify-content: left" T="string" Size="Size.Small" Color="Color.Info" Icon="@Icons.Material.Filled.ThumbUp">
+                                            @post.VoteScore
+                                        </MudChip>
+                                        <MudChip Style="justify-content: left" T="string" Size="Size.Small" Color="Color.Secondary" Icon="@Icons.Material.Filled.Comment">
+                                            @post.CommentCount
+                                        </MudChip>
+                                        <MudChip Style="justify-content: left" T="string" Size="Size.Small" Color="Color.Default" Icon="@Icons.Material.Filled.Edit">
+                                            @post.Revisions
+                                        </MudChip>
+                                    </MudStack>
+                                </MudItem>
+                                <MudItem></MudItem>
+                            </MudGrid>
+                        </MudItem>
+                        <MudItem>
+                            <MudText Align="Align.Left" Typo="Typo.h6" Color="Color.Primary">@post.Title</MudText>
+                            <MudText Align="Align.Left" Typo="Typo.body2" Color="Color.Default" Style="min-height: 3rem">
+                                @post.ContentPreview
                             </MudText>
-                        </MudItem>
-                        <MudItem xs="12">
-                            <MudText Typo="Typo.body2" Color="Color.Default">@post.ContentPreview</MudText>
-                        </MudItem>
-                        <MudItem xs="12">
-                            <MudStack Row="true" Spacing="4" Class="mt-2">
-                                <MudChip T="string" Size="Size.Small" Color="Color.Info" Icon="@Icons.Material.Filled.ThumbUp">
-                                    Score: @post.VoteScore
-                                </MudChip>
-                                <MudChip T="string" Size="Size.Small" Color="Color.Secondary" Icon="@Icons.Material.Filled.Comment">
-                                    @post.CommentCount Comments
-                                </MudChip>
-                                <MudChip T="string" Size="Size.Small" Color="Color.Default" Icon="@Icons.Material.Filled.Edit">
-                                    @post.Revisions Revisions
+                            <MudContainer Style="display: flex; justify-content: end;">
+                                <MudChip T="string" Size="Size.Small" Color="Color.Default" Icon="@Icons.Material.Filled.Person">
+                                    @post.Username
                                 </MudChip>
                                 <MudChip T="string" Size="Size.Small" Color="Color.Default" Icon="@Icons.Material.Filled.Schedule">
-                                    @post.LastModified.ToString("g")
+                                    @(post.Revisions > 1 ? "edited" : "posted") @post.LastModified.ToString("g")
                                 </MudChip>
-                            </MudStack>
+                            </MudContainer>
                         </MudItem>
                     </MudGrid>
                 </MudPaper>
@@ -104,31 +111,27 @@
         {
             <MudPaper Class="pa-4 mt-4">
                 <MudStack Row="true" Justify="Justify.Center" AlignItems="AlignItems.Center" Spacing="2">
-                    <MudButton Variant="Variant.Filled" 
-                               Color="Color.Primary" 
-                               Disabled="@(currentPage <= 1)"
-                               OnClick="@(() => GoToPage(1))">
-                        First
-                    </MudButton>
-                    <MudButton Variant="Variant.Filled" 
-                               Color="Color.Primary" 
-                               Disabled="@(currentPage <= 1)"
-                               OnClick="@(() => GoToPage(currentPage - 1))">
-                        Previous
-                    </MudButton>
+                    <MudIconButton Variant="Variant.Filled"
+                                   Color="Color.Primary" 
+                                   Disabled="@(currentPage <= 1)"
+                                   OnClick="@(() => GoToPage(1))"
+                                   Icon="@Icons.Material.Filled.KeyboardDoubleArrowLeft" />
+                    <MudIconButton Variant="Variant.Filled"
+                                   Color="Color.Primary" 
+                                   Disabled="@(currentPage <= 1)"
+                                   OnClick="@(() => GoToPage(currentPage - 1))"
+                                   Icon="@Icons.Material.Filled.KeyboardArrowLeft" />
                     <MudText>Page @currentPage of @paginationInfo.TotalPages</MudText>
-                    <MudButton Variant="Variant.Filled" 
-                               Color="Color.Primary" 
-                               Disabled="@(currentPage >= paginationInfo.TotalPages)"
-                               OnClick="@(() => GoToPage(currentPage + 1))">
-                        Next
-                    </MudButton>
-                    <MudButton Variant="Variant.Filled" 
-                               Color="Color.Primary" 
-                               Disabled="@(currentPage >= paginationInfo.TotalPages)"
-                               OnClick="@(() => GoToPage(paginationInfo.TotalPages))">
-                        Last
-                    </MudButton>
+                    <MudIconButton Variant="Variant.Filled"
+                                   Color="Color.Primary" 
+                                   Disabled="@(currentPage >= paginationInfo.TotalPages)"
+                                   OnClick="@(() => GoToPage(currentPage + 1))"
+                                   Icon="@Icons.Material.Filled.KeyboardArrowRight" />
+                    <MudIconButton Variant="Variant.Filled"
+                                   Color="Color.Primary" 
+                                   Disabled="@(currentPage >= paginationInfo.TotalPages)"
+                                   OnClick="@(() => GoToPage(paginationInfo.TotalPages))"
+                                   Icon="@Icons.Material.Filled.KeyboardDoubleArrowRight" />
                 </MudStack>
             </MudPaper>
         }

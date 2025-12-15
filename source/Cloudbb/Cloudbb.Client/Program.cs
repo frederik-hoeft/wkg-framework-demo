@@ -3,14 +3,13 @@ using Cloudbb.Client;
 using Cloudbb.Client.Services;
 using Cloudbb.Client.Services.Auth;
 using Cloudbb.Client.Services.Comments;
+using Cloudbb.Client.Services.Network;
 using Cloudbb.Client.Services.Posts;
 using Cloudbb.Client.Services.TimeZone;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
-using Microsoft.Extensions.Options;
 using MudBlazor.Services;
-using System.ComponentModel;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -20,20 +19,14 @@ builder.RootComponents.Add<HeadOutlet>("head::after");
 
 // Configure API base URL
 string apiBaseUrl = builder.Configuration["ApiBaseUrl"] ?? "https://localhost:7156"; // Default to API port
-builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(apiBaseUrl) });
 
-// Add authorization message handler
-//builder.Services.AddScoped<AuthorizationMessageHandler>();
-//builder.Services.AddScoped(sp =>
-//{
-//    AuthorizationMessageHandler handler = sp.GetRequiredService<AuthorizationMessageHandler>();
-//    handler.InnerHandler = new HttpClientHandler();
-//    HttpClient httpClient = new(handler)
-//    {
-//        BaseAddress = new Uri(apiBaseUrl)
-//    };
-//    return httpClient;
-//});
+// Add HTTP client with authorization and default header handlers
+builder.Services.AddSingleton<IDefaultHeaderInjectorCollection, DefaultHeaderInjectorCollection>();
+builder.Services.AddTransient<AuthorizationMessageHandler>();
+builder.Services.AddTransient<DefaultHeaderInjectingHandler>();
+builder.Services.AddHttpClient("Cloudbb.Web.Client", client => client.BaseAddress = new Uri(apiBaseUrl))
+    .AddHttpMessageHandler<AuthorizationMessageHandler>()
+    .AddHttpMessageHandler<DefaultHeaderInjectingHandler>();
 
 // Add MudBlazor services
 builder.Services.AddMudServices();

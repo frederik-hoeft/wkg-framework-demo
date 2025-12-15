@@ -64,6 +64,7 @@ public sealed partial class PostsController(ITransactionServiceHandle transactio
             (
                 postInfo.Post.Id,
                 postInfo.Post.UserId,
+                postInfo.Post.User.Username,
                 postInfo.LatestRevision.Title,
                 // limit content preview to 512 characters
                 postInfo.LatestRevision.Content.Length <= 512

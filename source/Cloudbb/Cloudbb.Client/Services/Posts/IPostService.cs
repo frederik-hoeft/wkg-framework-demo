@@ -35,5 +35,5 @@ public interface IPostService
     /// <summary>
     /// Casts or updates a vote on a forum post.
     /// </summary>
-    Task<bool> VotePostAsync(PostVoteRequest request);
+    Task<PostVoteResponse?> VotePostAsync(PostVoteRequest request);
 }

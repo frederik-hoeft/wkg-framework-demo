@@ -1,55 +1,18 @@
-using System.Net.Http.Json;
-using System.Text.Json;
 using Cloudbb.Client.Models;
+using Cloudbb.Client.Services.Network;
+using System.Text.Json;
 
 namespace Cloudbb.Client.Services.Comments;
 
-internal sealed class CommentService
-(
-    HttpClient httpClient,
-    JsonSerializerOptions jsonOptions
-) : ICommentService
+internal sealed class CommentService(IHttpClientFactory httpClientFactory, JsonSerializerOptions jsonOptions) 
+    : ApiService(httpClientFactory, jsonOptions), ICommentService
 {
-    public async Task<CommentCreationResponse?> CreateCommentAsync(CommentCreationRequest request)
-    {
-        try
-        {
-            using HttpResponseMessage response = await httpClient.PostAsJsonAsync("api/v1/comments/create", request, jsonOptions);
-            if (!response.IsSuccessStatusCode)
-            {
-                return null;
-            }
-            return await response.Content.ReadFromJsonAsync<CommentCreationResponse>(jsonOptions);
-        }
-        catch
-        {
-            return null;
-        }
-    }
+    public Task<CommentCreationResponse?> CreateCommentAsync(CommentCreationRequest request) =>
+        PostAsync<CommentCreationRequest, CommentCreationResponse>("api/v1/comments/create", request);
 
-    public async Task<bool> DeleteCommentAsync(CommentDeleteRequest request)
-    {
-        try
-        {
-            using HttpResponseMessage response = await httpClient.PostAsJsonAsync("api/v1/comments/delete", request, jsonOptions);
-            return response.IsSuccessStatusCode;
-        }
-        catch
-        {
-            return false;
-        }
-    }
+    public Task<bool> DeleteCommentAsync(CommentDeleteRequest request) =>
+        PostAsync("api/v1/comments/delete", request);
 
-    public async Task<bool> VoteCommentAsync(CommentVoteRequest request)
-    {
-        try
-        {
-            using HttpResponseMessage response = await httpClient.PostAsJsonAsync("api/v1/comments/vote", request, jsonOptions);
-            return response.IsSuccessStatusCode;
-        }
-        catch
-        {
-            return false;
-        }
-    }
+    public Task<CommentVoteResponse?> VoteCommentAsync(CommentVoteRequest request) =>
+        PostAsync<CommentVoteRequest, CommentVoteResponse>("api/v1/comments/vote", request);
 }

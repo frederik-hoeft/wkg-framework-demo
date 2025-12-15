@@ -6,6 +6,7 @@
 /// </summary>
 /// <param name="PostId">Unique identifier for the post.</param>
 /// <param name="UserId">Unique identifier of the user who authored the post.</param>
+/// <param name="Username">The username of the post author.</param>
 /// <param name="Title">The post title for display in the listing.</param>
 /// <param name="ContentPreview">Truncated preview of the post content for quick reading.</param>
 /// <param name="VoteScore">Current voting score (upvotes minus downvotes) for post ranking.</param>
@@ -16,6 +17,7 @@ public sealed record PostListResponseEntry
 (
     Guid PostId,
     Guid UserId,
+    string Username,
     string Title,
     string ContentPreview,
     int VoteScore,

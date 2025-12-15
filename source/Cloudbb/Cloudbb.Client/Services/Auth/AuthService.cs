@@ -1,26 +1,15 @@
-using System.Net.Http.Json;
 using System.Text.Json;
 using Cloudbb.Client.Models;
+using Cloudbb.Client.Services.Network;
 
 namespace Cloudbb.Client.Services.Auth;
 
-internal sealed class AuthService
-(
-    HttpClient httpClient,
-    IJwtAuthenticationState authState,
-    JsonSerializerOptions jsonOptions
-) : IAuthService
+internal sealed class AuthService(IHttpClientFactory httpClientFactory, IJwtAuthenticationState authState, JsonSerializerOptions jsonOptions) 
+    : ApiService(httpClientFactory, jsonOptions), IAuthService
 {
     public async Task<bool> LoginAsync(LoginRequest request)
     {
-        using HttpResponseMessage response = await httpClient.PostAsJsonAsync("api/v1/auth/login", request, jsonOptions);
-        if (!response.IsSuccessStatusCode)
-        {
-            return false;
-        }
-        using Stream responseContent = await response.Content.ReadAsStreamAsync();
-        AuthResponse? loginResponse = await JsonSerializer.DeserializeAsync<AuthResponse>(responseContent, jsonOptions);
-
+        AuthResponse? loginResponse = await PostAsync<LoginRequest, AuthResponse>("api/v1/auth/login", request);
         if (loginResponse is not { IsSuccess: true })
         {
             return false;
@@ -31,14 +20,7 @@ internal sealed class AuthService
 
     public async Task<bool> RegisterAsync(RegisterRequest request)
     {
-        using HttpResponseMessage responseMessage = await httpClient.PostAsJsonAsync("api/v1/auth/register", request);
-        if (!responseMessage.IsSuccessStatusCode)
-        {
-            return false;
-        }
-        using Stream responseContent = await responseMessage.Content.ReadAsStreamAsync();
-        AuthResponse? response = await JsonSerializer.DeserializeAsync<AuthResponse>(responseContent, jsonOptions);
-
+        AuthResponse? response = await PostAsync<RegisterRequest, AuthResponse>("api/v1/auth/register", request);
         if (response is not { IsSuccess: true })
         {
             return false;
