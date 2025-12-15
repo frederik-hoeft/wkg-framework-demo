@@ -2,18 +2,17 @@
 
 ## Project Overview
 
-Full-stack ASP.NET Core 10.0 Web API with Blazor WebAssembly frontend, using Identity authentication, JWT tokens, PostgreSQL database via Entity Framework Core, and GitLab CI/CD. The project follows strict coding standards emphasizing explicit typing and readability.
+Full-stack ASP.NET Core 10.0 Web API with Blazor WebAssembly frontend, using Identity authentication, JWT tokens, PostgreSQL database via Entity Framework Core. The project follows strict coding standards emphasizing explicit typing and readability.
 
 ## Architecture & Structure
 
 ### Core Components
 
 - **`source/Cloudbb/Cloudbb.Web/`** - Main web API project with versioned controllers (`Api/V1/Controllers/`)
-- **`source/Cloudbb/Cloudbb.Client/`** - Blazor WebAssembly client with MudBlazor components
-- **`Data/ApplicationDbContext.cs`** - EF Core context with Identity integration, enforces explicit entity/property mapping policies
+- **`source/Cloudbb/Cloudbb.Client/`** - Blazor WebAssembly SPA with MudBlazor UI, JWT authentication
+- **`Data/CloudbbDbContext.cs`** - EF Core context with Identity integration, enforces explicit entity/property mapping policies
 - **`Data/Model/`** - Domain entities (CloudbbUser extends Identity, CloudbbPost/Comment with voting system)
-- **`Services/Auth/`** - Interface-driven JWT authentication services with ECDSA signing
-- **`Services/Versioning/`** - Version information for diagnostics and monitoring
+- **`Services/Auth/`** - Interface-driven JWT authentication services with RSA signing
 - **`Configuration/`** - API versioning, Swagger configuration, CORS for Blazor client
 - **`source/Cloudbb/Cloudbb.Web.Tests/`** - Unit tests using MSTest v4 with Moq
 - **`source/Cloudbb/Cloudbb.Web.Tests.Integration/`** - Integration tests with PostgreSQL test database
@@ -21,14 +20,14 @@ Full-stack ASP.NET Core 10.0 Web API with Blazor WebAssembly frontend, using Ide
 ### Technology Stack
 
 - **.NET 10.0** with nullable reference types enabled globally
-- **Blazor WebAssembly** client with MudBlazor UI components, JWT authentication
+- **Blazor WebAssembly** SPA with MudBlazor UI components, JWT authentication, local storage
 - **PostgreSQL** via Npgsql.EntityFrameworkCore.PostgreSQL with source-generated model discovery
-- **ASP.NET Core Identity** with JWT Bearer authentication (zero clock skew)
-- **Entity Framework Core** with auto-apply migrations on startup
+- **ASP.NET Core Identity** with JWT Bearer authentication using authentication/authorization middleware
+- **Entity Framework Core** with auto-apply migrations on startup, source-generated model discovery (`Wkg.EntityFrameworkCore.Discovery.SourceGeneration`)
 - **MSTest.Sdk/4.0.1** for testing with Moq 4.20.72
 - **API Versioning** with grouped Swagger docs in Development
-- **CORS** configured for Blazor client cross-origin requests
-- **GitLab CI/CD** with staged builds, unit tests, and integration tests
+- **CORS** configured for Blazor client cross-origin requests (`BlazorClient` policy)
+- **Transaction Management** via `Wkg.AspNetCore.Transactions` with ReadCommitted isolation
 
 ## Critical Coding Standards
 
@@ -84,9 +83,9 @@ All business services implement interfaces for testability:
 
 ```csharp
 // Service registration pattern in Program.cs
-builder.Services.AddSingleton<IJwtAlgorithmProvider, JwtEcdsaSha256AlgorithmProvider>();
-builder.Services.AddSingleton<IJwtECDsaSigningKeyImportService, JwtECDsaPemFileSigningKeyImportService>();
-builder.Services.AddSingleton<IJwtSigningKeyProvider, JwtECDsaSigningKeyProvider>();
+builder.Services.AddSingleton<IJwtAlgorithmProvider, RsaSha256AlgorithmProvider>();
+builder.Services.AddSingleton<IJwtRsaSigningKeyImportService, JwtRsaPemFileSigningKeyImportService>();
+builder.Services.AddSingleton<IJwtSigningKeyProvider, JwtRsaSigningKeyProvider>();
 builder.Services.AddScoped<IJwtService, JwtService>();
 
 // Interface definition pattern
@@ -98,8 +97,7 @@ public interface IJwtService
 
 ### Authentication Architecture
 
-- **JWT with ECDSA signing** (ES256) for production security via PEM key files
-- **Zero clock skew** validation: `ClockSkew = TimeSpan.Zero`
+- **JWT with RSA signing** (RS256) for production security via PEM key files
 - **Claims-based** with `NameIdentifier`, `Name`, `Email`, `Role`, `Jti`, `Iat`
 - **Global authorization** with `[Authorize]` on controllers
 - **CORS integration** for Blazor client (`BlazorClient` policy for ports 7089/5097)
@@ -110,7 +108,10 @@ public interface IJwtService
 
 - **Project**: `source/Cloudbb/Cloudbb.Client/` - Blazor WASM with MudBlazor
 - **Authentication**: JWT stored in localStorage, `JwtAuthenticationStateProvider` for auth state
-- **Services**: `AuthService` for login/register, `HttpClient` with Bearer token injection
+- **Services**: `AuthService` for login/register, HTTP clients with Bearer token injection
+- **UI Components**: MudBlazor for responsive design, timezone management, real-time voting
+- **Pages**: Forum views (Home, Posts, PostDetail, CreatePost, EditPost) with pagination/sorting
+- **API Integration**: Structured DTOs matching server API, automatic JSON serialization
 
 ## Testing Patterns
 
@@ -295,9 +296,10 @@ builder.LoadModels(modelLoader, modelOptions => modelOptions
 ## Key Files for Context
 
 ### Essential Reading
-- **`Program.cs`** - Service registration, JWT config, middleware pipeline
+- **`Program.cs`** - Service registration, JWT config, middleware pipeline  
+- **`Startup.cs`** - Detailed service configuration and application setup
 - **`code-style.md`** - Complete coding standards (MUST READ before coding)
-- **`Data/ApplicationDbContext.cs`** - EF Core policies and model loading
+- **`Data/CloudbbDbContext.cs`** - EF Core policies and model loading
 - **`add-migration.sh`** - Custom migration script with PascalCase validation
 - **`_friends.cs`** - Test access configuration
 
@@ -306,50 +308,6 @@ builder.LoadModels(modelLoader, modelOptions => modelOptions
 - **Swagger**: Development-only with Bearer auth, grouped by version
 - **Connection strings**: `DatabaseConnection` for PostgreSQL (`cloudbb`/`cloudbb_dev`)
 - **JWT settings**: `Auth:Jwt:*` configuration keys
-
-## CI/CD Pipeline
-
-### GitLab CI Stages
-- **Build**: `dotnet build` with dependency caching
-- **Unit Tests**: `dotnet test Cloudbb.Web.Tests` 
-- **Integration Tests**: `dotnet test Cloudbb.Web.Tests.Integration` with PostgreSQL service
-- **Caching**: NuGet packages and build artifacts cached per stage/branch
-- **Environment**: Uses `mcr.microsoft.com/dotnet/sdk:10.0-alpine` image
-
-When adding features, maintain strict interface-driven design, follow the explicit typing rules, register all services in `Program.cs` with appropriate lifetimes, and write comprehensive MSTest v4 tests with mocked dependencies.
-
-## Client-Server Integration
-
-### API Contract Reference
-
-- **Authentication**: Use JWT Bearer tokens with proper CORS configuration (`BlazorClient` policy)
-- **Error handling**: API returns structured error responses with validation details and trace IDs and domain
-- **Vote entities**: CloudbbPostVote, CloudbbCommentVote for user interactions
-- **Connection entities**: Implement `ICloudbbConnectionEntity` for many-to-many relationships
-
-## Key Files for Context
-
-### Essential Reading
-- **`Program.cs`** - Service registration, JWT config, middleware pipeline
-- **`code-style.md`** - Complete coding standards (MUST READ before coding)
-- **`Data/ApplicationDbContext.cs`** - EF Core policies and model loading
-- **`add-migration.sh`** - Custom migration script with PascalCase validation
-- **`_friends.cs`** - Test access configuration
-
-### Configuration Structure
-- **API versioning**: Default v1.0 with URL substitution (`api/v{version}/`)
-- **Swagger**: Development-only with Bearer auth, grouped by version
-- **Connection strings**: `DatabaseConnection` for PostgreSQL (`cloudbb`/`cloudbb_dev`)
-- **JWT settings**: `Auth:Jwt:*` configuration keys
-
-## CI/CD Pipeline
-
-### GitLab CI Stages
-- **Build**: `dotnet build` with dependency caching
-- **Unit Tests**: `dotnet test Cloudbb.Web.Tests` 
-- **Integration Tests**: `dotnet test Cloudbb.Web.Tests.Integration` with PostgreSQL service
-- **Caching**: NuGet packages and build artifacts cached per stage/branch
-- **Environment**: Uses `mcr.microsoft.com/dotnet/sdk:10.0-alpine` image
 
 When adding features, maintain strict interface-driven design, follow the explicit typing rules, register all services in `Program.cs` with appropriate lifetimes, and write comprehensive MSTest v4 tests with mocked dependencies.
 
