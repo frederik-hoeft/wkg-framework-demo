@@ -29,6 +29,12 @@
             @Body
         </MudContainer>
     </MudMainContent>
+
+    <MudAppBar Bottom="true" Color="Color.Surface" Class="justify-center">
+        <MudText Typo="Typo.body2" Color="Color.Inherit">
+            Cloudbb Blazor WebAssembly Client <br />
+            v@(CloudbbClient.VersionInfo.VersionString) &mdash; @CloudbbClient.VersionInfo.BuildDateUtc.ToString("g")</MudText>
+    </MudAppBar>
 </MudLayout>
 
 @code {
