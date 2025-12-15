@@ -132,18 +132,19 @@ internal sealed class Startup : IAsyncStartupScript
     public static async ValueTask ConfigureAsync(WebApplication app, CancellationToken cancellationToken = default)
     {
         // Configure the HTTP request pipeline.
+        IApiVersionDescriptionProvider versionDescriptionProvider = app.Services.GetRequiredService<IApiVersionDescriptionProvider>();
+        app.UseSwagger();
+        app.UseSwaggerUI(swagger =>
+        {
+            swagger.EnableDeepLinking();
+            foreach (ApiVersionDescription description in versionDescriptionProvider.ApiVersionDescriptions)
+            {
+                swagger.SwaggerEndpoint($"/swagger/{description.GroupName}/swagger.json", description.GroupName.ToUpperInvariant());
+            }
+        });
+
         if (app.Environment.IsDevelopment())
         {
-            IApiVersionDescriptionProvider versionDescriptionProvider = app.Services.GetRequiredService<IApiVersionDescriptionProvider>();
-            app.UseSwagger();
-            app.UseSwaggerUI(swagger =>
-            {
-                swagger.EnableDeepLinking();
-                foreach (ApiVersionDescription description in versionDescriptionProvider.ApiVersionDescriptions)
-                {
-                    swagger.SwaggerEndpoint($"/swagger/{description.GroupName}/swagger.json", description.GroupName.ToUpperInvariant());
-                }
-            });
             app.UseDeveloperExceptionPage();
         }
 
