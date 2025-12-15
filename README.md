@@ -5,14 +5,14 @@ Cloudbb is a feature-complete ASP.NET Core 10.0 forum Web API using PostgreSQL, 
 ## Overview
 - **Core app**: `source/Cloudbb/Cloudbb.Web` (`net10.0`, nullable enabled)
 - **Blazor Client**: `source/Cloudbb/Cloudbb.Client` - WebAssembly SPA with MudBlazor UI
-- **Auth**: ASP.NET Core Identity + JWT (ECDSA ES256 asymmetric signing), global authorization
+- **Auth**: ASP.NET Core Identity + JWT (RSA RS256 asymmetric signing), global authorization
 - **Data**: PostgreSQL via EF Core with explicit entity naming/mapping and model discovery
 - **API Versioning**: `Asp.Versioning` with grouped Swagger in Development  
 - **Transactions**: `ReadCommitted` via `Wkg.AspNetCore.Transactions`
 - **Testing**: Comprehensive unit and integration test suites using MSTest v4
 
 ## Features
-- **User Authentication**: JWT-based registration, login with secure ECDSA signing
+- **User Authentication**: JWT-based registration, login with secure RSA signing
 - **Forum Posts**: Create, edit, delete posts with revision history and community voting
 - **Comment System**: Threaded comments on posts with voting and moderation
 - **Community Voting**: Upvote/downvote system for posts and comments
@@ -32,7 +32,7 @@ Cloudbb is a feature-complete ASP.NET Core 10.0 forum Web API using PostgreSQL, 
         - `CommentsController`: comment creation, deletion, voting on posts
     - `Configuration/Swagger/`: Swagger configuration and filters
     - `Data/`: DbContext, model loader, entities (posts, comments, votes, users), migrations
-    - `Services/Auth/`: JWT services with ECDSA key management and claim handling
+    - `Services/Auth/`: JWT services with RSA key management and claim handling
 - `source/Cloudbb/Cloudbb.Client` - Blazor WebAssembly client
     - `Pages/`: Razor pages (Home, Login, Register, Posts, PostDetail, CreatePost, EditPost)
     - `Components/`: Reusable components (TimeZoneSelector)
@@ -56,22 +56,22 @@ Set these in `appsettings.json` or environment variables:
 - `Auth:Jwt:Issuer`, `Auth:Jwt:Audience`: JWT issuer and audience validation
 - `Auth:Jwt:ClockSkew`: token validation clock skew (e.g., "00:00:00" for zero skew)
 - `Auth:Jwt:TimeToLive`: token expiration time
-- `Auth:Jwt:ECDsaKeyPath`: path to ECDSA private key PEM file for JWT signing
+- `Auth:Jwt:RsaKeyPath`: path to RSA private key PEM file for JWT signing
 
 Swagger XML comments are loaded from `Cloudbb.Web.xml` and enabled in Development.
 
 ## Authentication
 JWT is configured in `Startup.cs` (`JwtBearerDefaults`) with configurable clock skew. Services:
-- `IJwtAlgorithmProvider` → `JwtEcdsaSha256AlgorithmProvider` (ES256 algorithm)
-- `IJwtECDsaSigningKeyImportService` → `JwtECDsaPemFileSigningKeyImportService` (PEM key loading)
-- `IJwtSigningKeyProvider` → `JwtECDsaSigningKeyProvider` (ECDSA key management)
+- `IJwtAlgorithmProvider` → `RsaSha256AlgorithmProvider` (RS256 algorithm)
+- `IJwtRsaSigningKeyImportService` → `JwtRsaPemFileSigningKeyImportService` (PEM key loading)
+- `IJwtSigningKeyProvider` → `JwtRsaSigningKeyProvider` (RSA key management)
 - `IJwtService` → `JwtService` (token generation and validation)
 - `IUserClaimIndex` → `UserClaimIndex` (user claim management)
 - `ITimingRandomizationService` → `CsprngTimingRandomizationService` (security timing)
 
 Tokens include claims for `NameIdentifier`, `Name`, `Email`, `Role`, `Jti`, `Iat`. TTL from `Auth:Jwt:TimeToLive`.
 
-**Security**: Uses ECDSA ES256 asymmetric signing with PEM-format private keys for enhanced security over symmetric HMAC approaches.
+**Security**: Uses RSA RS256 asymmetric signing with PEM-format private keys for enhanced security over symmetric HMAC approaches.
 
 ## Data & Migrations
 - `CloudbbDbContext` extends `IdentityDbContext<IdentityUser>` and enforces explicit entity/property mapping policies
@@ -117,7 +117,7 @@ dotnet test source/Cloudbb/Cloudbb.slnx
 To run both the API and client together for local development:
 
 1. **Configure the API** (see Configuration section):
-   - Generate ECDSA key for JWT signing: `openssl ecparam -out ec_key.pem -name prime256v1 -genkey`
+   - Generate RSA key for JWT signing: `openssl genrsa -out rsa_key.pem 2048`
    - Set up PostgreSQL database
    - Update `appsettings.Development.json` with connection string and key path
 
