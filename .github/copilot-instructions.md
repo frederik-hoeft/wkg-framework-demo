@@ -9,7 +9,6 @@ Full-stack ASP.NET Core 10.0 Web API with Blazor WebAssembly frontend, using Ide
 ### Core Components
 
 - **`source/Cloudbb/Cloudbb.Web/`** - Main web API project with versioned controllers (`Api/V1/Controllers/`)
-- **`source/Cloudbb/Cloudbb.Web.Aot/`** - Native AOT-optimized version for performance-critical deployments
 - **`source/Cloudbb/Cloudbb.Client/`** - Blazor WebAssembly client with MudBlazor components
 - **`Data/ApplicationDbContext.cs`** - EF Core context with Identity integration, enforces explicit entity/property mapping policies
 - **`Data/Model/`** - Domain entities (CloudbbUser extends Identity, CloudbbPost/Comment with voting system)
@@ -18,12 +17,10 @@ Full-stack ASP.NET Core 10.0 Web API with Blazor WebAssembly frontend, using Ide
 - **`Configuration/`** - API versioning, Swagger configuration, CORS for Blazor client
 - **`source/Cloudbb/Cloudbb.Web.Tests/`** - Unit tests using MSTest v4 with Moq
 - **`source/Cloudbb/Cloudbb.Web.Tests.Integration/`** - Integration tests with PostgreSQL test database
-- **`/docs/api-v1.json`** - OpenAPI specification for client implementation
 
 ### Technology Stack
 
 - **.NET 10.0** with nullable reference types enabled globally
-- **Native AOT** support for production performance optimization (`PublishAot=true`)
 - **Blazor WebAssembly** client with MudBlazor UI components, JWT authentication
 - **PostgreSQL** via Npgsql.EntityFrameworkCore.PostgreSQL with source-generated model discovery
 - **ASP.NET Core Identity** with JWT Bearer authentication (zero clock skew)
@@ -73,13 +70,10 @@ dotnet ef database update
 ```bash
 # Standard commands from solution root
 dotnet build source/Cloudbb/Cloudbb.slnx
-dotnet run --project source/Cloudbb/Cloudbb.Web  # Standard runtime
+dotnet run --project source/Cloudbb/Cloudbb.Web  # API server
 dotnet run --project source/Cloudbb/Cloudbb.Client  # Blazor client dev server
 dotnet test source/Cloudbb/Cloudbb.Web.Tests
 dotnet test source/Cloudbb/Cloudbb.Web.Tests.Integration
-
-# AOT build for production (requires longer build time)
-dotnet publish source/Cloudbb/Cloudbb.Web.Aot -c Release
 ```
 
 ## Service Patterns
@@ -117,11 +111,6 @@ public interface IJwtService
 - **Project**: `source/Cloudbb/Cloudbb.Client/` - Blazor WASM with MudBlazor
 - **Authentication**: JWT stored in localStorage, `JwtAuthenticationStateProvider` for auth state
 - **Services**: `AuthService` for login/register, `HttpClient` with Bearer token injection
-- **Features**: Complete forum UI with post listing, creation, editing, commenting, and voting
-- **Models**: Include `[JsonPropertyName]` attributes for camelCase API compatibility
-- **Pages**: Razor pages in `Pages/` (Home, Posts, PostDetail, CreatePost, EditPost)
-- **Components**: Reusable MudBlazor components in `Components/` (TimeZoneSelector)
-- **Layout**: Navigation and app shell in `Layout/`
 
 ## Testing Patterns
 
@@ -324,10 +313,6 @@ builder.LoadModels(modelLoader, modelOptions => modelOptions
 - **Build**: `dotnet build` with dependency caching
 - **Unit Tests**: `dotnet test Cloudbb.Web.Tests` 
 - **Integration Tests**: `dotnet test Cloudbb.Web.Tests.Integration` with PostgreSQL service
-- **Deploy**: Matrix strategy builds multiple images:
-  - `registry/project/api` - Standard runtime API
-  - `registry/project/api-native` - Native AOT optimized API  
-  - `registry/project/client` - Blazor WebAssembly client
 - **Caching**: NuGet packages and build artifacts cached per stage/branch
 - **Environment**: Uses `mcr.microsoft.com/dotnet/sdk:10.0-alpine` image
 
@@ -337,7 +322,40 @@ When adding features, maintain strict interface-driven design, follow the explic
 
 ### API Contract Reference
 
-- **Always use `/docs/api-v1.json`** as the definitive API contract when implementing client functionality
-- **Models**: Ensure client models match server contracts exactly, use `[JsonPropertyName]` attributes for camelCase
+- **Authentication**: Use JWT Bearer tokens with proper CORS configuration (`BlazorClient` policy)
+- **Error handling**: API returns structured error responses with validation details and trace IDs and domain
+- **Vote entities**: CloudbbPostVote, CloudbbCommentVote for user interactions
+- **Connection entities**: Implement `ICloudbbConnectionEntity` for many-to-many relationships
+
+## Key Files for Context
+
+### Essential Reading
+- **`Program.cs`** - Service registration, JWT config, middleware pipeline
+- **`code-style.md`** - Complete coding standards (MUST READ before coding)
+- **`Data/ApplicationDbContext.cs`** - EF Core policies and model loading
+- **`add-migration.sh`** - Custom migration script with PascalCase validation
+- **`_friends.cs`** - Test access configuration
+
+### Configuration Structure
+- **API versioning**: Default v1.0 with URL substitution (`api/v{version}/`)
+- **Swagger**: Development-only with Bearer auth, grouped by version
+- **Connection strings**: `DatabaseConnection` for PostgreSQL (`cloudbb`/`cloudbb_dev`)
+- **JWT settings**: `Auth:Jwt:*` configuration keys
+
+## CI/CD Pipeline
+
+### GitLab CI Stages
+- **Build**: `dotnet build` with dependency caching
+- **Unit Tests**: `dotnet test Cloudbb.Web.Tests` 
+- **Integration Tests**: `dotnet test Cloudbb.Web.Tests.Integration` with PostgreSQL service
+- **Caching**: NuGet packages and build artifacts cached per stage/branch
+- **Environment**: Uses `mcr.microsoft.com/dotnet/sdk:10.0-alpine` image
+
+When adding features, maintain strict interface-driven design, follow the explicit typing rules, register all services in `Program.cs` with appropriate lifetimes, and write comprehensive MSTest v4 tests with mocked dependencies.
+
+## Client-Server Integration
+
+### API Contract Reference
+
 - **Authentication**: Use JWT Bearer tokens with proper CORS configuration (`BlazorClient` policy)
 - **Error handling**: API returns structured error responses with validation details and trace IDs
