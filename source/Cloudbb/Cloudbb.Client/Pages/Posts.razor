@@ -91,7 +91,7 @@
                         <MudItem>
                             <MudText Align="Align.Left" Typo="Typo.h6" Color="Color.Primary">@post.Title</MudText>
                             <MudText Align="Align.Left" Typo="Typo.body2" Color="Color.Default" Style="min-height: 3rem">
-                                @post.ContentPreview
+                                @(post.ContentPreview.Length == 512 ? post.ContentPreview + "..." : post.ContentPreview)
                             </MudText>
                             <MudContainer Style="display: flex; justify-content: end;">
                                 <MudChip T="string" Size="Size.Small" Color="Color.Default" Icon="@Icons.Material.Filled.Person">

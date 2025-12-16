@@ -1,4 +1,5 @@
 @page "/register"
+@using Cloudbb.Client.Services.Auth
 @inject IAuthService AuthService
 @inject NavigationManager Navigation
 @inject ISnackbar Snackbar
@@ -83,8 +84,8 @@
             
             if (success)
             {
-                Snackbar.Add("Registration successful! Please log in.", Severity.Success);
-                Navigation.NavigateTo("/login");
+                Snackbar.Add("Registration successful! Welcome to Cloudbb Forum.", Severity.Success);
+                Navigation.NavigateTo("/");
             }
             else
             {
