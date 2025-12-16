@@ -4,7 +4,6 @@
 @inject ISnackbar Snackbar
 
 <MudContainer MaxWidth="MaxWidth.Small" Class="pt-8">
-    <MudThemeProvider @ref="_mudThemeProvider" @bind-IsDarkMode="_isDarkMode" />
     <MudPaper Class="pa-8">
         <MudText Typo="Typo.h4" Align="Align.Center" Color="Color.Primary" Class="mb-6">
             Login
@@ -56,17 +55,6 @@
 @code {
     private LoginRequest loginRequest = new();
     private bool isLoading = false;
-    private bool _isDarkMode;
-    private MudThemeProvider? _mudThemeProvider;
-
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (firstRender && _mudThemeProvider is not null)
-        {
-            _isDarkMode = await _mudThemeProvider.GetSystemDarkModeAsync();
-            StateHasChanged();
-        }
-    }
 
     private async Task HandleLogin()
     {
