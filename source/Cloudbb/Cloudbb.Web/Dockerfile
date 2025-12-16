@@ -11,6 +11,9 @@ EXPOSE 8081
 
 # This stage is used to build the service project
 FROM mcr.microsoft.com/dotnet/sdk:10.0-alpine3.22 AS build
+USER root
+RUN apk add --no-cache bash
+USER $APP_UID
 SHELL ["/bin/bash", "-euo", "pipefail", "-c"]
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
