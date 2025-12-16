@@ -28,26 +28,14 @@ JsonSerializerOptions jsonOptions = new()
     }
 };
 
-// bootstrap API base URL
-using (HttpClient http = new(){ BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) })
-{
-    ApiBootstrapOptions? apiConfig = await http.GetFromJsonAsync<ApiBootstrapOptions>("api-bootstrap.json", jsonOptions);
-    if (string.IsNullOrEmpty(apiConfig?.ApiBaseUrl))
-    {
-        throw new InvalidOperationException("API base URL could not be determined from api-bootstrap.json.");
-    }
-    builder.Services.AddSingleton(apiConfig);
-}
+// Configure API base URL (loaded from wwwroot/appsettings.json)
+string apiBaseUrl = builder.Configuration["ApiBaseUrl"] ?? throw new InvalidOperationException("API base URL is not configured.");
 
 // Add HTTP client with authorization and default header handlers
 builder.Services.AddSingleton<IDefaultHeaderInjectorCollection, DefaultHeaderInjectorCollection>();
 builder.Services.AddTransient<AuthorizationMessageHandler>();
 builder.Services.AddTransient<DefaultHeaderInjectingHandler>();
-builder.Services.AddHttpClient("Cloudbb.Web.Client", (serviceProvider, client) =>
-    {
-        ApiBootstrapOptions apiOptions = serviceProvider.GetRequiredService<ApiBootstrapOptions>();
-        client.BaseAddress = new Uri(apiOptions.ApiBaseUrl);
-    })
+builder.Services.AddHttpClient("Cloudbb.Web.Client", client => client.BaseAddress = new Uri(apiBaseUrl))
     .AddHttpMessageHandler<AuthorizationMessageHandler>()
     .AddHttpMessageHandler<DefaultHeaderInjectingHandler>();
 
