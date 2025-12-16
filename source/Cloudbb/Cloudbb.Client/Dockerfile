@@ -12,6 +12,7 @@ ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
 COPY ["Directory.Build.props", "."]
 COPY ["Cloudbb.Client/Cloudbb.Client.csproj", "Cloudbb.Client/"]
+RUN dotnet workload install wasm-tools
 RUN dotnet restore "./Cloudbb.Client/Cloudbb.Client.csproj"
 COPY . .
 
