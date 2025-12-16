@@ -1,5 +1,6 @@
 using Blazored.LocalStorage;
 using Cloudbb.Client;
+using Cloudbb.Client.Models;
 using Cloudbb.Client.Services;
 using Cloudbb.Client.Services.Auth;
 using Cloudbb.Client.Services.Comments;
@@ -10,6 +11,7 @@ using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using MudBlazor.Services;
+using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -17,14 +19,35 @@ WebAssemblyHostBuilder builder = WebAssemblyHostBuilder.CreateDefault(args);
 builder.RootComponents.Add<App>("#app");
 builder.RootComponents.Add<HeadOutlet>("head::after");
 
-// Configure API base URL
-string apiBaseUrl = builder.Configuration["ApiBaseUrl"] ?? "https://localhost:7156"; // Default to API port
+JsonSerializerOptions jsonOptions = new()
+{
+    PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+    Converters =
+    {
+        new JsonStringEnumConverter(JsonNamingPolicy.CamelCase)
+    }
+};
+
+// bootstrap API base URL
+using (HttpClient http = new(){ BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) })
+{
+    ApiBootstrapOptions? apiConfig = await http.GetFromJsonAsync<ApiBootstrapOptions>("api-bootstrap.json", jsonOptions);
+    if (string.IsNullOrEmpty(apiConfig?.ApiBaseUrl))
+    {
+        throw new InvalidOperationException("API base URL could not be determined from api-bootstrap.json.");
+    }
+    builder.Services.AddSingleton(apiConfig);
+}
 
 // Add HTTP client with authorization and default header handlers
 builder.Services.AddSingleton<IDefaultHeaderInjectorCollection, DefaultHeaderInjectorCollection>();
 builder.Services.AddTransient<AuthorizationMessageHandler>();
 builder.Services.AddTransient<DefaultHeaderInjectingHandler>();
-builder.Services.AddHttpClient("Cloudbb.Web.Client", client => client.BaseAddress = new Uri(apiBaseUrl))
+builder.Services.AddHttpClient("Cloudbb.Web.Client", (serviceProvider, client) =>
+    {
+        ApiBootstrapOptions apiOptions = serviceProvider.GetRequiredService<ApiBootstrapOptions>();
+        client.BaseAddress = new Uri(apiOptions.ApiBaseUrl);
+    })
     .AddHttpMessageHandler<AuthorizationMessageHandler>()
     .AddHttpMessageHandler<DefaultHeaderInjectingHandler>();
 
@@ -36,14 +59,7 @@ builder.Services.AddBlazoredLocalStorage();
 
 // Add authentication services
 builder.Services.AddAuthorizationCore();
-builder.Services.AddSingleton(new JsonSerializerOptions
-{
-    PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-    Converters =
-    {
-        new JsonStringEnumConverter(JsonNamingPolicy.CamelCase)
-    }
-});
+builder.Services.AddSingleton(jsonOptions);
 builder.Services.AddScoped<ITokenStore, LocalStorageTokenStore>();
 builder.Services.AddScoped<AuthenticationStateProvider, JwtAuthenticationStateProvider>();
 builder.Services.AddScoped<IJwtAuthenticationState, JwtAuthenticationStateAccessor>();
