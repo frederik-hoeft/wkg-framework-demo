@@ -1,4 +1,4 @@
-﻿namespace Cloudbb.Client.Services;
+﻿namespace Cloudbb.Client.Services.Auth;
 
 public interface ITokenStore
 {
