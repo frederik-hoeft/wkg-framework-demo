@@ -5,7 +5,7 @@ stages:
   - deploy
 
 variables:
-  DOTNET_SDK_TAG: '10.0-alpine'
+  DOTNET_SDK_TAG: '10.0-noble'
   OBJECTS_DIRECTORY: 'artifacts/obj'
   NUGET_PACKAGES_DIRECTORY: '.nuget'
   SOURCE_CODE_PATH: './source/Cloudbb'
@@ -25,12 +25,14 @@ variables:
       # Path to the directory where restored dependencies are kept.
       - '$NUGET_PACKAGES_DIRECTORY'
     policy: pull-push
-  before_script: &base_before_script
-    - dotnet restore "${SOURCE_CODE_PATH}" --packages "${NUGET_PACKAGES_DIRECTORY}"
 
 build:
   extends: .dotnet-base
   stage: build
+  before_script:
+    - apt-get update && apt-get install python3 -y
+    - dotnet workload install wasm-tools
+    - dotnet restore "${SOURCE_CODE_PATH}" --packages "${NUGET_PACKAGES_DIRECTORY}"
   script:
     - dotnet build "${SOURCE_CODE_PATH}" --no-restore
 
@@ -51,9 +53,8 @@ integration-tests:
         POSTGRES_USER: postgres
         POSTGRES_PASSWORD: postgres
   before_script:
-    - *base_before_script
     # set up RSA keys for JWT signing
-    - apk add --no-cache openssl
+    - apt-get update && apt-get install openssl -y
     - openssl genrsa -out /tmp/Cloudbb.Web.Tests.Integration.rsa_key.pem 2048
   script:
     - dotnet test "${SOURCE_CODE_PATH}/Cloudbb.Web.Tests.Integration" --no-restore
