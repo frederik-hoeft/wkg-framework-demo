@@ -32,6 +32,7 @@ build:
   extends: .dotnet-base
   stage: build
   before_script:
+    - apt-get update && apt-get install python3 -y
     - dotnet workload install wasm-tools
     - *base_before_script
   script:
