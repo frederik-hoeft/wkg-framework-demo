@@ -26,14 +26,8 @@ internal sealed class Startup : IAsyncStartupScript
         // Add Entity Framework
         // use source-generated model discovery for better startup performance and compile-time model validation
         services.AddSingleton<IModelLoader, CloudbbModelLoader>();
-        string? connectionString = configuration.GetConnectionString("DatabaseConnection");
-        if (string.IsNullOrWhiteSpace(connectionString))
-        {
-            throw new InvalidOperationException("Database connection string is missing.");
-        }
-        Console.WriteLine(connectionString);
         services.AddDbContext<CloudbbDbContext>(options =>
-            options.UseNpgsql(configuration.GetConnectionString(connectionString)));
+            options.UseNpgsql(configuration.GetConnectionString("DatabaseConnection")));
 
         // Add Identity services
         services.AddIdentity<IdentityUser, IdentityRole>(options =>
