@@ -148,7 +148,8 @@ internal sealed class Startup : IAsyncStartupScript
             app.UseDeveloperExceptionPage();
         }
 
-        app.UseHttpsRedirection();
+        // https isn't configured at the moment
+        //app.UseHttpsRedirection();
 
         // Enable CORS
         app.UseCors("BlazorClient");
