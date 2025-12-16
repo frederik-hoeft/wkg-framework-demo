@@ -32,8 +32,8 @@ build:
   extends: .dotnet-base
   stage: build
   before_script:
-    - *base_before_script
     - dotnet workload install wasm-tools
+    - *base_before_script
   script:
     - dotnet build "${SOURCE_CODE_PATH}" --no-restore
 
