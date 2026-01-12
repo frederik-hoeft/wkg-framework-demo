@@ -159,4 +159,4 @@ Comprehensive test coverage using **MSTest v4**:
 - JWT issuer/audience/key and DB connection are read from configuration.
 
 ## License
-This repository does not declare a license. If you intend to distribute or open-source, please add a license file.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
